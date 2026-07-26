@@ -25,6 +25,8 @@ pos-mvp/
 ## Backend
 
 ```bash
+createdb pos_db              # crear la base de datos (una sola vez)
+
 cd backend
 cp .env.example .env        # ajustar DATABASE_URL, JWT_SECRET, ADMIN_EMAIL/ADMIN_PASSWORD
 uv sync
@@ -55,3 +57,7 @@ Detalle de arquitectura y estado de cada módulo en `docs/BACKEND.md` y `docs/FR
 ## Fuera de alcance (MVP)
 
 Multi-sucursal, facturación electrónica, e-commerce, app móvil.
+
+## Docker
+
+`backend/Dockerfile` existe para despliegue/producción. El desarrollo local **no** usa Docker — corre directo contra Postgres local (ver pasos arriba).
