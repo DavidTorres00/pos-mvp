@@ -1,28 +1,19 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-
+import { useApiMutation } from '@/lib/hooks/useApiMutation'
+import { useOptimisticToggle } from '@/lib/hooks/useOptimisticToggle'
 import { createCategoria, setEstadoCategoria, updateCategoria } from '@/services/categoriaService'
-import type { CategoriaPayload } from '@/services/categoriaService'
+import type { Categoria, CategoriaPayload } from '@/services/categoriaService'
 
 export function useCreateCategoria() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (payload: CategoriaPayload) => createCategoria(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }),
-  })
+  return useApiMutation((payload: CategoriaPayload) => createCategoria(payload), [['categorias']])
 }
 
 export function useUpdateCategoria() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: CategoriaPayload }) => updateCategoria(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }),
-  })
+  return useApiMutation(
+    ({ id, payload }: { id: number; payload: CategoriaPayload }) => updateCategoria(id, payload),
+    [['categorias']],
+  )
 }
 
 export function useSetEstadoCategoria() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, activo }: { id: number; activo: boolean }) => setEstadoCategoria(id, activo),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categorias'] }),
-  })
+  return useOptimisticToggle<Categoria>(['categorias'], ({ id, activo }) => setEstadoCategoria(id, activo))
 }

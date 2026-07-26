@@ -9,21 +9,19 @@ export interface Usuario {
 }
 
 interface AuthState {
-  token: string | null
   usuario: Usuario | null
   isAuthenticated: () => boolean
-  setSession: (token: string, usuario: Usuario) => void
+  setSession: (usuario: Usuario) => void
   clearSession: () => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      token: null,
       usuario: null,
-      isAuthenticated: () => get().token !== null,
-      setSession: (token, usuario) => set({ token, usuario }),
-      clearSession: () => set({ token: null, usuario: null }),
+      isAuthenticated: () => get().usuario !== null,
+      setSession: (usuario) => set({ usuario }),
+      clearSession: () => set({ usuario: null }),
     }),
     { name: 'pos-auth' },
   ),

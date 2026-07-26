@@ -7,8 +7,8 @@ export interface VentasDia {
   cantidad_ventas: number
 }
 
-export async function getVentasDia(): Promise<VentasDia> {
-  const { data } = await api.get<VentasDia>('/reportes/ventas-dia')
+export async function getVentasDia(fecha?: string): Promise<VentasDia> {
+  const { data } = await api.get<VentasDia>('/reportes/ventas-dia', { params: fecha ? { fecha } : undefined })
   return data
 }
 

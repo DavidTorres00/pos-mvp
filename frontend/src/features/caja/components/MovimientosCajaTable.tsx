@@ -1,5 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/DataStates'
+import { formatCurrency, formatDateTime } from '@/lib/format'
 import type { MovimientoCaja } from '@/services/cajaService'
 
 interface MovimientosCajaTableProps {
@@ -8,7 +10,7 @@ interface MovimientosCajaTableProps {
 
 export function MovimientosCajaTable({ movimientos }: MovimientosCajaTableProps) {
   if (movimientos.length === 0) {
-    return <p className="text-sm text-muted-foreground">Sin movimientos manuales en este turno.</p>
+    return <EmptyState message="Sin movimientos manuales en este turno." />
   }
 
   return (
@@ -24,13 +26,22 @@ export function MovimientosCajaTable({ movimientos }: MovimientosCajaTableProps)
       <TableBody>
         {movimientos.map((movimiento) => (
           <TableRow key={movimiento.id}>
-            <TableCell>{new Date(movimiento.created_at).toLocaleString()}</TableCell>
+            <TableCell>{formatDateTime(movimiento.created_at)}</TableCell>
             <TableCell>
               <Badge variant={movimiento.tipo === 'entrada' ? 'default' : 'secondary'}>
                 {movimiento.tipo === 'entrada' ? 'Entrada' : 'Salida'}
               </Badge>
             </TableCell>
-            <TableCell>${movimiento.monto}</TableCell>
+            <TableCell
+              className={
+                movimiento.tipo === 'entrada'
+                  ? 'font-semibold tabular-nums text-success'
+                  : 'font-semibold tabular-nums text-destructive'
+              }
+            >
+              {movimiento.tipo === 'entrada' ? '+' : '−'}
+              {formatCurrency(movimiento.monto)}
+            </TableCell>
             <TableCell>{movimiento.motivo ?? '—'}</TableCell>
           </TableRow>
         ))}

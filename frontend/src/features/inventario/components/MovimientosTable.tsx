@@ -1,5 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/DataStates'
+import { formatDateTime } from '@/lib/format'
 import type { Movimiento } from '@/services/inventarioService'
 
 interface MovimientosTableProps {
@@ -8,7 +10,7 @@ interface MovimientosTableProps {
 
 export function MovimientosTable({ movimientos }: MovimientosTableProps) {
   if (movimientos.length === 0) {
-    return <p className="text-sm text-muted-foreground">No hay movimientos registrados.</p>
+    return <EmptyState message="No hay movimientos registrados." />
   }
 
   return (
@@ -25,7 +27,7 @@ export function MovimientosTable({ movimientos }: MovimientosTableProps) {
       <TableBody>
         {movimientos.map((movimiento) => (
           <TableRow key={movimiento.id}>
-            <TableCell>{new Date(movimiento.created_at).toLocaleString()}</TableCell>
+            <TableCell>{formatDateTime(movimiento.created_at)}</TableCell>
             <TableCell>{movimiento.producto.nombre}</TableCell>
             <TableCell>
               <Badge variant={movimiento.tipo === 'entrada' ? 'default' : 'secondary'}>

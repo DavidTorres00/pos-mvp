@@ -9,6 +9,6 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (values: LoginFormValues) => login(values),
-    onSuccess: ({ token, usuario }) => setSession(token, usuario),
+    onSuccess: (usuario) => setSession(usuario),
   })
 }

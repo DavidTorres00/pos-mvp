@@ -1,10 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FormField } from '@/components/form/FormField'
+import { SelectField } from '@/components/form/SelectField'
 import { movimientoCajaSchema, type MovimientoCajaFormValues } from '@/features/caja/schemas/cajaSchema'
 
 interface MovimientoCajaFormProps {
@@ -26,37 +25,31 @@ export function MovimientoCajaForm({ isPending, errorMessage, onSubmit }: Movimi
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-2">
-        <Label>Tipo</Label>
-        <Controller
-          name="tipo"
-          control={control}
-          render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entrada">Entrada (depósito)</SelectItem>
-                <SelectItem value="salida">Salida (retiro)</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
+      <SelectField
+        control={control}
+        name="tipo"
+        label="Tipo"
+        options={[
+          { value: 'entrada', label: 'Entrada (depósito)' },
+          { value: 'salida', label: 'Salida (retiro)' },
+        ]}
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="monto">Monto</Label>
-        <Input id="monto" type="number" step="0.01" {...register('monto', { valueAsNumber: true })} />
-        {errors.monto && <p className="text-sm text-destructive">{errors.monto.message}</p>}
-      </div>
+      <FormField
+        label="Monto"
+        type="number"
+        step="0.01"
+        register={register('monto', { valueAsNumber: true })}
+        error={errors.monto}
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="motivo">Motivo (opcional)</Label>
-        <Input id="motivo" {...register('motivo')} />
-      </div>
+      <FormField label="Motivo (opcional)" register={register('motivo')} error={errors.motivo} />
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Guardando...' : 'Registrar'}

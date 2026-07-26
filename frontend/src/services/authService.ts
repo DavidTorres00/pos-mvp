@@ -6,15 +6,11 @@ export interface LoginPayload {
   password: string
 }
 
-interface TokenResponse {
-  access_token: string
-  token_type: string
+export async function login(payload: LoginPayload): Promise<Usuario> {
+  const { data } = await api.post<Usuario>('/auth/login', payload)
+  return data
 }
 
-export async function login(payload: LoginPayload): Promise<{ token: string; usuario: Usuario }> {
-  const { data } = await api.post<TokenResponse>('/auth/login', payload)
-  const { data: usuario } = await api.get<Usuario>('/auth/me', {
-    headers: { Authorization: `Bearer ${data.access_token}` },
-  })
-  return { token: data.access_token, usuario }
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout')
 }

@@ -5,6 +5,8 @@ import jwt
 
 from app.core.config import settings
 
+ACCESS_TOKEN_COOKIE_NAME = "access_token"
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()

@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { ErrorState, LoadingState } from '@/components/DataStates'
+import { Pagination } from '@/components/Pagination'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
 import { VentaForm } from '@/features/ventas/components/VentaForm'
 import { VentasTable } from '@/features/ventas/components/VentasTable'
 import { useCrearVenta } from '@/features/ventas/hooks/useCrearVenta'
 import { useVentas } from '@/features/ventas/hooks/useVentas'
 import type { VentaFormValues } from '@/features/ventas/schemas/ventaSchema'
+import { getApiErrorMessage } from '@/lib/apiError'
+import { formatCurrency, formatDateTime } from '@/lib/format'
+import { usePagination } from '@/lib/hooks/usePagination'
 import type { Venta } from '@/services/ventaService'
 
 export function VentasPage() {
@@ -16,10 +21,12 @@ export function VentasPage() {
   const [detalle, setDetalle] = useState<Venta | null>(null)
 
   const { data: caja, isLoading: isLoadingCaja } = useCajaActual()
-  const { data: ventas = [], isLoading } = useVentas()
+  const { data: ventas = [], isLoading, isError } = useVentas()
+  const { pageItems, page, pageCount, setPage, total } = usePagination(ventas, 10)
   const crear = useCrearVenta()
 
   function handleCreate(values: VentaFormValues) {
+    if (crear.isPending) return
     const payload = {
       items: values.items.map((item) => ({ producto_id: item.producto_id as number, cantidad: item.cantidad })),
     }
@@ -27,9 +34,9 @@ export function VentasPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
+    <div className="flex max-w-4xl flex-col gap-4 p-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold">Ventas</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Ventas</h1>
         {!isLoadingCaja && caja ? (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -41,7 +48,9 @@ export function VentasPage() {
               </DialogHeader>
               <VentaForm
                 isPending={crear.isPending}
-                errorMessage={crear.isError ? 'No se pudo registrar la venta' : undefined}
+                errorMessage={
+                  crear.isError ? getApiErrorMessage(crear.error, 'No se pudo registrar la venta') : undefined
+                }
                 onSubmit={handleCreate}
               />
             </DialogContent>
@@ -60,9 +69,14 @@ export function VentasPage() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
+        <LoadingState />
+      ) : isError ? (
+        <ErrorState />
       ) : (
-        <VentasTable ventas={ventas} onVerDetalle={setDetalle} />
+        <>
+          <VentasTable ventas={pageItems} onVerDetalle={setDetalle} />
+          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
+        </>
       )}
 
       <Dialog open={detalle !== null} onOpenChange={(open) => !open && setDetalle(null)}>
@@ -72,15 +86,18 @@ export function VentasPage() {
           </DialogHeader>
           {detalle && (
             <div className="flex flex-col gap-2 text-sm">
-              <p>Fecha: {new Date(detalle.created_at).toLocaleString()}</p>
+              <p>Fecha: {formatDateTime(detalle.created_at)}</p>
               <ul className="flex flex-col gap-1">
                 {detalle.items.map((item) => (
                   <li key={item.id}>
-                    {item.producto.nombre} — {item.cantidad} x ${item.precio_unitario} = ${item.subtotal}
+                    {item.producto.nombre} — {item.cantidad} x {formatCurrency(item.precio_unitario)} ={' '}
+                    {formatCurrency(item.subtotal)}
                   </li>
                 ))}
               </ul>
-              <p className="font-semibold">Total: ${detalle.total}</p>
+              <p className="border-t pt-2 text-base font-semibold tabular-nums text-foreground">
+                Total: <span className="text-primary">{formatCurrency(detalle.total)}</span>
+              </p>
             </div>
           )}
         </DialogContent>

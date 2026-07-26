@@ -1,7 +1,7 @@
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/DataStates'
 import type { Categoria } from '@/services/categoriaService'
 
 interface CategoriasTableProps {
@@ -12,7 +12,7 @@ interface CategoriasTableProps {
 
 export function CategoriasTable({ categorias, onEdit, onToggleEstado }: CategoriasTableProps) {
   if (categorias.length === 0) {
-    return <p className="text-sm text-muted-foreground">No hay categorías.</p>
+    return <EmptyState message="No hay categorías." />
   }
 
   return (
@@ -30,10 +30,14 @@ export function CategoriasTable({ categorias, onEdit, onToggleEstado }: Categori
             <TableCell>{categoria.nombre}</TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <Switch checked={categoria.activo} onCheckedChange={() => onToggleEstado(categoria)} />
-                <Badge variant={categoria.activo ? 'default' : 'secondary'}>
+                <Switch
+                  checked={categoria.activo}
+                  onCheckedChange={() => onToggleEstado(categoria)}
+                  aria-label={categoria.activo ? `Desactivar ${categoria.nombre}` : `Activar ${categoria.nombre}`}
+                />
+                <span className={categoria.activo ? 'text-sm text-foreground' : 'text-sm text-muted-foreground'}>
                   {categoria.activo ? 'Activo' : 'Inactivo'}
-                </Badge>
+                </span>
               </div>
             </TableCell>
             <TableCell>

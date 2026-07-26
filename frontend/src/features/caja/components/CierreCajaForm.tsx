@@ -2,10 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import type { CajaResumen } from '@/services/cajaService'
+import { FormField } from '@/components/form/FormField'
 import { cierreSchema, type CierreFormValues } from '@/features/caja/schemas/cajaSchema'
+import { formatCurrency } from '@/lib/format'
+import type { CajaResumen } from '@/services/cajaService'
 
 interface CierreCajaFormProps {
   resumen: CajaResumen | undefined
@@ -25,21 +25,27 @@ export function CierreCajaForm({ resumen, isPending, errorMessage, onSubmit }: C
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       {resumen && (
         <div className="rounded-md border p-3 text-sm">
-          <p>Monto inicial: ${resumen.caja.monto_inicial}</p>
-          <p>Ventas en efectivo: ${resumen.total_ventas_efectivo}</p>
-          <p>Entradas manuales: ${resumen.total_entradas}</p>
-          <p>Salidas manuales: ${resumen.total_salidas}</p>
-          <p className="font-semibold">Monto esperado: ${resumen.monto_esperado}</p>
+          <p>Monto inicial: {formatCurrency(resumen.caja.monto_inicial)}</p>
+          <p>Ventas en efectivo: {formatCurrency(resumen.total_ventas_efectivo)}</p>
+          <p>Entradas manuales: {formatCurrency(resumen.total_entradas)}</p>
+          <p>Salidas manuales: {formatCurrency(resumen.total_salidas)}</p>
+          <p className="font-semibold">Monto esperado: {formatCurrency(resumen.monto_esperado)}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="monto_final">Monto final contado</Label>
-        <Input id="monto_final" type="number" step="0.01" {...register('monto_final', { valueAsNumber: true })} />
-        {errors.monto_final && <p className="text-sm text-destructive">{errors.monto_final.message}</p>}
-      </div>
+      <FormField
+        label="Monto final contado"
+        type="number"
+        step="0.01"
+        register={register('monto_final', { valueAsNumber: true })}
+        error={errors.monto_final}
+      />
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Cerrando...' : 'Cerrar caja'}

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 720
     admin_email: str = "admin@possystem.com"
     admin_password: str = "change-me-admin"
+    cookie_secure: bool = True
 
 
 settings = Settings()

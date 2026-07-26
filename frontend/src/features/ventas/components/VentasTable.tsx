@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/DataStates'
+import { formatCurrency, formatDateTime } from '@/lib/format'
 import type { Venta } from '@/services/ventaService'
 
 interface VentasTableProps {
@@ -9,7 +11,7 @@ interface VentasTableProps {
 
 export function VentasTable({ ventas, onVerDetalle }: VentasTableProps) {
   if (ventas.length === 0) {
-    return <p className="text-sm text-muted-foreground">No hay ventas registradas.</p>
+    return <EmptyState message="No hay ventas registradas." />
   }
 
   return (
@@ -24,8 +26,8 @@ export function VentasTable({ ventas, onVerDetalle }: VentasTableProps) {
       <TableBody>
         {ventas.map((venta) => (
           <TableRow key={venta.id}>
-            <TableCell>{new Date(venta.created_at).toLocaleString()}</TableCell>
-            <TableCell>${venta.total}</TableCell>
+            <TableCell>{formatDateTime(venta.created_at)}</TableCell>
+            <TableCell className="font-semibold tabular-nums">{formatCurrency(venta.total)}</TableCell>
             <TableCell>
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(venta)}>
                 Ver detalle

@@ -2,8 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FormField } from '@/components/form/FormField'
 import { categoriaSchema, type CategoriaFormValues } from '@/features/categorias/schemas/categoriaSchema'
 
 interface CategoriaFormProps {
@@ -25,13 +24,13 @@ export function CategoriaForm({ defaultValues, isPending, errorMessage, onSubmit
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nombre">Nombre</Label>
-        <Input id="nombre" {...register('nombre')} />
-        {errors.nombre && <p className="text-sm text-destructive">{errors.nombre.message}</p>}
-      </div>
+      <FormField label="Nombre" register={register('nombre')} error={errors.nombre} />
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Guardando...' : 'Guardar'}

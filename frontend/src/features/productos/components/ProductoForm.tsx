@@ -1,10 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FormField } from '@/components/form/FormField'
+import { SelectField } from '@/components/form/SelectField'
 import { useCategorias } from '@/features/categorias/hooks/useCategorias'
 import { productoSchema, type ProductoFormValues } from '@/features/productos/schemas/productoSchema'
 
@@ -31,51 +30,34 @@ export function ProductoForm({ defaultValues, isPending, errorMessage, onSubmit 
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="nombre">Nombre</Label>
-        <Input id="nombre" {...register('nombre')} />
-        {errors.nombre && <p className="text-sm text-destructive">{errors.nombre.message}</p>}
-      </div>
+      <FormField label="Nombre" register={register('nombre')} error={errors.nombre} />
+      <FormField label="SKU" register={register('sku')} error={errors.sku} />
+      <FormField
+        label="Precio de venta"
+        type="number"
+        step="0.01"
+        register={register('precio_venta', { valueAsNumber: true })}
+        error={errors.precio_venta}
+      />
+      <SelectField
+        control={control}
+        name="categoria_id"
+        label="Categoría"
+        placeholder="Sin categoría"
+        error={errors.categoria_id}
+        options={[
+          { value: SIN_CATEGORIA, label: 'Sin categoría' },
+          ...categorias.map((categoria) => ({ value: String(categoria.id), label: categoria.nombre })),
+        ]}
+        serialize={(value) => (value === null ? SIN_CATEGORIA : String(value))}
+        parse={(value) => (value === SIN_CATEGORIA ? null : Number(value))}
+      />
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="sku">SKU</Label>
-        <Input id="sku" {...register('sku')} />
-        {errors.sku && <p className="text-sm text-destructive">{errors.sku.message}</p>}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="precio_venta">Precio de venta</Label>
-        <Input id="precio_venta" type="number" step="0.01" {...register('precio_venta', { valueAsNumber: true })} />
-        {errors.precio_venta && <p className="text-sm text-destructive">{errors.precio_venta.message}</p>}
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label>Categoría</Label>
-        <Controller
-          name="categoria_id"
-          control={control}
-          render={({ field }) => (
-            <Select
-              value={field.value === null ? SIN_CATEGORIA : String(field.value)}
-              onValueChange={(value) => field.onChange(value === SIN_CATEGORIA ? null : Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sin categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_CATEGORIA}>Sin categoría</SelectItem>
-                {categorias.map((categoria) => (
-                  <SelectItem key={categoria.id} value={String(categoria.id)}>
-                    {categoria.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {errorMessage && (
+        <p role="alert" className="text-sm text-destructive">
+          {errorMessage}
+        </p>
+      )}
 
       <Button type="submit" disabled={isPending}>
         {isPending ? 'Guardando...' : 'Guardar'}

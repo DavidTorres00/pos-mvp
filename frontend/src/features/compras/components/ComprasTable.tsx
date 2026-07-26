@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmptyState } from '@/components/DataStates'
+import { formatCurrency, formatDateTime } from '@/lib/format'
 import type { Compra } from '@/services/compraService'
 
 interface ComprasTableProps {
@@ -9,7 +11,7 @@ interface ComprasTableProps {
 
 export function ComprasTable({ compras, onVerDetalle }: ComprasTableProps) {
   if (compras.length === 0) {
-    return <p className="text-sm text-muted-foreground">No hay compras registradas.</p>
+    return <EmptyState message="No hay compras registradas." />
   }
 
   return (
@@ -25,9 +27,9 @@ export function ComprasTable({ compras, onVerDetalle }: ComprasTableProps) {
       <TableBody>
         {compras.map((compra) => (
           <TableRow key={compra.id}>
-            <TableCell>{new Date(compra.created_at).toLocaleString()}</TableCell>
+            <TableCell>{formatDateTime(compra.created_at)}</TableCell>
             <TableCell>{compra.proveedor}</TableCell>
-            <TableCell>${compra.total}</TableCell>
+            <TableCell className="font-semibold tabular-nums">{formatCurrency(compra.total)}</TableCell>
             <TableCell>
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(compra)}>
                 Ver detalle

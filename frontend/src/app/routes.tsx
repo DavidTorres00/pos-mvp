@@ -1,21 +1,26 @@
 import { createBrowserRouter } from 'react-router-dom'
 
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 import { ProtectedLayout } from '@/layouts/ProtectedLayout'
-import { CajaPage } from '@/pages/CajaPage'
-import { CategoriasPage } from '@/pages/CategoriasPage'
-import { ComprasPage } from '@/pages/ComprasPage'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { InventarioPage } from '@/pages/InventarioPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { ProductosPage } from '@/pages/ProductosPage'
-import { ReportesPage } from '@/pages/ReportesPage'
-import { VentasPage } from '@/pages/VentasPage'
+import { NotFoundPage } from '@/pages/NotFoundPage'
+import {
+  CajaPage,
+  CategoriasPage,
+  ComprasPage,
+  DashboardPage,
+  InventarioPage,
+  ProductosPage,
+  ReportesPage,
+  VentasPage,
+} from '@/app/lazyPages'
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
   {
     path: '/',
     element: <ProtectedLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'productos', element: <ProductosPage /> },
@@ -25,6 +30,7 @@ export const router = createBrowserRouter([
       { path: 'compras', element: <ComprasPage /> },
       { path: 'ventas', element: <VentasPage /> },
       { path: 'reportes', element: <ReportesPage /> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ])

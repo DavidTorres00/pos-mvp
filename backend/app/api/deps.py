@@ -1,25 +1,21 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_access_token
+from app.core.security import ACCESS_TOKEN_COOKIE_NAME, decode_access_token
 from app.database.session import get_db
 from app.models.usuario import Usuario
 from app.repositories import usuario_repository
 
-bearer_scheme = HTTPBearer()
 
-
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
-) -> Usuario:
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Usuario:
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciales inválidas o expiradas",
-        headers={"WWW-Authenticate": "Bearer"},
     )
-    email = decode_access_token(credentials.credentials)
+    token = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    if token is None:
+        raise unauthorized
+    email = decode_access_token(token)
     if email is None:
         raise unauthorized
     usuario = usuario_repository.get_by_email(db, email)
