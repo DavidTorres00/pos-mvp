@@ -31,7 +31,7 @@ cd backend
 cp .env.example .env        # ajustar DATABASE_URL, JWT_SECRET, ADMIN_EMAIL/ADMIN_PASSWORD
 uv sync
 uv run alembic upgrade head
-uv run python -m scripts.seed_admin   # crea el usuario admin inicial
+uv run python -m scripts.seed_admin   # crea el usuario admin inicial (rol admin)
 uv run uvicorn app.main:app --reload
 ```
 
@@ -53,6 +53,8 @@ App disponible en `http://localhost:5173`.
 Completo: Login → Productos → Categorías → Inventario → Caja → Compras → Ventas → Reportes.
 
 Detalle de arquitectura y estado de cada módulo en `docs/BACKEND.md` y `docs/FRONTEND.md`.
+
+Control de acceso por rol: `admin` (todo) y `cajero` (ventas + caja, solo lectura del resto).
 
 ## Fuera de alcance (MVP)
 
