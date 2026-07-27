@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.movimiento_inventario import TipoMovimiento
 from app.schemas.producto import ProductoOut
@@ -9,7 +9,7 @@ from app.schemas.producto import ProductoOut
 class MovimientoCreate(BaseModel):
     producto_id: int
     tipo: TipoMovimiento
-    cantidad: int
+    cantidad: int = Field(gt=0)
     motivo: str | None = None
 
 

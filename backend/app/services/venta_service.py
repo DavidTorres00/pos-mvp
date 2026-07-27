@@ -27,8 +27,8 @@ class VentaNoEncontradaError(Exception):
     pass
 
 
-def listar(db: Session) -> list[Venta]:
-    return venta_repository.get_all(db)
+def listar(db: Session, page: int, size: int) -> tuple[list[Venta], int]:
+    return venta_repository.get_all(db, page, size)
 
 
 def obtener(db: Session, venta_id: int) -> Venta:
@@ -43,14 +43,18 @@ def crear(db: Session, usuario_id: int, items: list[VentaItemCreate]) -> Venta:
     if caja is None:
         raise CajaNoAbiertaError()
 
-    productos = {}
+    cantidad_solicitada: dict[int, int] = {}
     for item in items:
-        producto = producto_repository.get_by_id(db, item.producto_id)
+        cantidad_solicitada[item.producto_id] = cantidad_solicitada.get(item.producto_id, 0) + item.cantidad
+
+    productos = {}
+    for producto_id, cantidad_total in cantidad_solicitada.items():
+        producto = producto_repository.get_by_id(db, producto_id)
         if producto is None or not producto.activo:
-            raise ProductoInvalidoError(item.producto_id)
-        if producto.stock < item.cantidad:
-            raise StockInsuficienteError(item.producto_id)
-        productos[item.producto_id] = producto
+            raise ProductoInvalidoError(producto_id)
+        if producto.stock < cantidad_total:
+            raise StockInsuficienteError(producto_id)
+        productos[producto_id] = producto
 
     total = sum(
         (item.cantidad * productos[item.producto_id].precio_venta for item in items), Decimal("0")

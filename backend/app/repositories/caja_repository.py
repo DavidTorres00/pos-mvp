@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.caja import CajaSesion
 from app.models.movimiento_caja import MovimientoCaja
+from app.repositories.pagination import paginar
 
 
 def get_abierta(db: Session) -> CajaSesion | None:
@@ -20,24 +21,27 @@ def get_by_id(db: Session, caja_id: int) -> CajaSesion | None:
 
 def create(db: Session, caja: CajaSesion) -> CajaSesion:
     db.add(caja)
-    db.commit()
-    db.refresh(caja)
+    db.flush()
     return caja
 
 
 def save(db: Session, caja: CajaSesion) -> CajaSesion:
-    db.commit()
-    db.refresh(caja)
+    db.flush()
     return caja
 
 
-def get_movimientos(db: Session, caja_id: int) -> list[MovimientoCaja]:
+def get_movimientos(db: Session, caja_id: int, page: int, size: int) -> tuple[list[MovimientoCaja], int]:
     stmt = select(MovimientoCaja).where(MovimientoCaja.caja_id == caja_id).order_by(MovimientoCaja.created_at.desc())
+    return paginar(db, stmt, page, size)
+
+
+def get_todos_los_movimientos(db: Session, caja_id: int) -> list[MovimientoCaja]:
+    """Trae todos los movimientos de la caja, sin paginar: necesario para calcular el resumen/reconciliación."""
+    stmt = select(MovimientoCaja).where(MovimientoCaja.caja_id == caja_id)
     return list(db.scalars(stmt))
 
 
 def crear_movimiento(db: Session, movimiento: MovimientoCaja) -> MovimientoCaja:
     db.add(movimiento)
-    db.commit()
-    db.refresh(movimiento)
+    db.flush()
     return movimiento

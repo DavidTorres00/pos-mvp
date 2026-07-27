@@ -1,22 +1,22 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.movimiento_caja import TipoMovimientoCaja
 
 
 class CajaAbrirRequest(BaseModel):
-    monto_inicial: Decimal
+    monto_inicial: Decimal = Field(ge=0)
 
 
 class CajaCerrarRequest(BaseModel):
-    monto_final: Decimal
+    monto_final: Decimal = Field(ge=0)
 
 
 class MovimientoCajaCreate(BaseModel):
     tipo: TipoMovimientoCaja
-    monto: Decimal
+    monto: Decimal = Field(gt=0)
     motivo: str | None = None
 
 

@@ -2,10 +2,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.compra import Compra
+from app.repositories.pagination import paginar
 
 
-def get_all(db: Session) -> list[Compra]:
-    return list(db.scalars(select(Compra).order_by(Compra.created_at.desc())))
+def get_all(db: Session, page: int, size: int) -> tuple[list[Compra], int]:
+    stmt = select(Compra).order_by(Compra.created_at.desc())
+    return paginar(db, stmt, page, size)
 
 
 def get_by_id(db: Session, compra_id: int) -> Compra | None:
@@ -14,6 +16,5 @@ def get_by_id(db: Session, compra_id: int) -> Compra | None:
 
 def create(db: Session, compra: Compra) -> Compra:
     db.add(compra)
-    db.commit()
-    db.refresh(compra)
+    db.flush()
     return compra

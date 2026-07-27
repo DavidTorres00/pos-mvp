@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
 from app.models.usuario import Usuario
+from app.schemas.pagination import Pagina
 from app.schemas.venta import VentaCreate, VentaOut
 from app.services import venta_service
 from app.services.venta_service import (
@@ -16,9 +18,12 @@ from app.services.venta_service import (
 router = APIRouter(prefix="/ventas", tags=["ventas"], dependencies=[Depends(get_current_user)])
 
 
-@router.get("", response_model=list[VentaOut])
-def listar(db: Session = Depends(get_db)) -> list[VentaOut]:
-    return venta_service.listar(db)
+@router.get("", response_model=Pagina[VentaOut])
+def listar(
+    paginacion: ParametrosPaginacion = Depends(parametros_paginacion), db: Session = Depends(get_db)
+) -> Pagina[VentaOut]:
+    items, total = venta_service.listar(db, paginacion.page, paginacion.size)
+    return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
 @router.post("", response_model=VentaOut, status_code=status.HTTP_201_CREATED)

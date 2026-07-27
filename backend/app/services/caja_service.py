@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.caja import CajaSesion
@@ -27,11 +28,19 @@ def obtener_abierta(db: Session) -> CajaSesion | None:
     return caja_repository.get_abierta(db)
 
 
+def listar_movimientos(db: Session, caja_id: int, page: int, size: int) -> tuple[list[MovimientoCaja], int]:
+    return caja_repository.get_movimientos(db, caja_id, page, size)
+
+
 def abrir(db: Session, usuario_id: int, monto_inicial: Decimal) -> CajaSesion:
     if caja_repository.get_abierta(db) is not None:
         raise CajaYaAbiertaError()
     caja = CajaSesion(usuario_id=usuario_id, monto_inicial=monto_inicial)
-    return caja_repository.create(db, caja)
+    try:
+        with db.begin_nested():
+            return caja_repository.create(db, caja)
+    except IntegrityError:
+        raise CajaYaAbiertaError()
 
 
 def registrar_movimiento(db: Session, tipo: TipoMovimientoCaja, monto: Decimal, motivo: str | None) -> MovimientoCaja:
@@ -43,7 +52,7 @@ def registrar_movimiento(db: Session, tipo: TipoMovimientoCaja, monto: Decimal, 
 
 
 def _calcular_resumen(db: Session, caja: CajaSesion) -> CajaResumenOut:
-    movimientos = caja_repository.get_movimientos(db, caja.id)
+    movimientos = caja_repository.get_todos_los_movimientos(db, caja.id)
     total_entradas = sum((m.monto for m in movimientos if m.tipo == TipoMovimientoCaja.ENTRADA), Decimal("0"))
     total_salidas = sum((m.monto for m in movimientos if m.tipo == TipoMovimientoCaja.SALIDA), Decimal("0"))
     ventas = db.scalars(select(Venta).where(Venta.caja_id == caja.id))

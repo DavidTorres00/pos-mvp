@@ -18,8 +18,8 @@ class CompraNoEncontradaError(Exception):
     pass
 
 
-def listar(db: Session) -> list[Compra]:
-    return compra_repository.get_all(db)
+def listar(db: Session, page: int, size: int) -> tuple[list[Compra], int]:
+    return compra_repository.get_all(db, page, size)
 
 
 def obtener(db: Session, compra_id: int) -> Compra:

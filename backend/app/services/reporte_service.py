@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ class SinCajaError(Exception):
 
 
 def ventas_del_dia(db: Session, fecha: date | None = None) -> VentasDiaOut:
-    fecha = fecha or date.today()
+    fecha = fecha or datetime.now(UTC).date()
     total, cantidad = reporte_repository.totales_ventas_del_dia(db, fecha)
     return VentasDiaOut(fecha=fecha, total_ventas=total, cantidad_ventas=cantidad)
 

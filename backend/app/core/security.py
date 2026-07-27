@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -6,6 +7,8 @@ import jwt
 from app.core.config import settings
 
 ACCESS_TOKEN_COOKIE_NAME = "access_token"
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_HEADER_NAME = "x-csrf-token"
 
 
 def hash_password(password: str) -> str:
@@ -28,3 +31,7 @@ def decode_access_token(token: str) -> str | None:
     except jwt.PyJWTError:
         return None
     return payload.get("sub")
+
+
+def generate_csrf_token() -> str:
+    return secrets.token_urlsafe(32)

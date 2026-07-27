@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
 from app.models.usuario import Usuario
-from app.repositories import caja_repository
 from app.schemas.caja import (
     CajaAbrirRequest,
     CajaCerrarRequest,
@@ -13,6 +13,7 @@ from app.schemas.caja import (
     MovimientoCajaCreate,
     MovimientoCajaOut,
 )
+from app.schemas.pagination import Pagina
 from app.services import caja_service
 from app.services.caja_service import CajaNoAbiertaError, CajaNoEncontradaError, CajaYaAbiertaError
 
@@ -50,9 +51,14 @@ def crear_movimiento(payload: MovimientoCajaCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
 
 
-@router.get("/movimientos", response_model=list[MovimientoCajaOut])
-def listar_movimientos(caja_id: int, db: Session = Depends(get_db)) -> list[MovimientoCajaOut]:
-    return caja_repository.get_movimientos(db, caja_id)
+@router.get("/movimientos", response_model=Pagina[MovimientoCajaOut])
+def listar_movimientos(
+    caja_id: int,
+    paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
+    db: Session = Depends(get_db),
+) -> Pagina[MovimientoCajaOut]:
+    items, total = caja_service.listar_movimientos(db, caja_id, paginacion.page, paginacion.size)
+    return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
 @router.get("/{caja_id}/resumen", response_model=CajaResumenOut)

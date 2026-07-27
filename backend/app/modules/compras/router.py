@@ -1,19 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_role
+from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
-from app.models.usuario import Usuario
+from app.models.usuario import RolUsuario, Usuario
 from app.schemas.compra import CompraCreate, CompraOut
+from app.schemas.pagination import Pagina
 from app.services import compra_service
 from app.services.compra_service import CompraNoEncontradaError, ProductoInvalidoError
 
-router = APIRouter(prefix="/compras", tags=["compras"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/compras", tags=["compras"], dependencies=[Depends(require_role(RolUsuario.ADMIN))])
 
 
-@router.get("", response_model=list[CompraOut])
-def listar(db: Session = Depends(get_db)) -> list[CompraOut]:
-    return compra_service.listar(db)
+@router.get("", response_model=Pagina[CompraOut])
+def listar(
+    paginacion: ParametrosPaginacion = Depends(parametros_paginacion), db: Session = Depends(get_db)
+) -> Pagina[CompraOut]:
+    items, total = compra_service.listar(db, paginacion.page, paginacion.size)
+    return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
 @router.post("", response_model=CompraOut, status_code=status.HTTP_201_CREATED)

@@ -1,7 +1,7 @@
 from app.core.config import settings
 from app.core.security import hash_password
 from app.database.session import SessionLocal
-from app.models.usuario import Usuario
+from app.models.usuario import RolUsuario, Usuario
 from app.repositories import usuario_repository
 
 
@@ -16,6 +16,7 @@ def main() -> None:
             email=settings.admin_email,
             password_hash=hash_password(settings.admin_password),
             nombre="Administrador",
+            role=RolUsuario.ADMIN,
             activo=True,
         )
         db.add(admin)

@@ -8,8 +8,9 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_expire_minutes: int = 720
     admin_email: str = "admin@possystem.com"
-    admin_password: str = "change-me-admin"
+    admin_password: str
     cookie_secure: bool = True
+    cors_origins: str = "http://localhost:5173"
 
 
 settings = Settings()

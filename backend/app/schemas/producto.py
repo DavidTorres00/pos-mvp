@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.categoria import CategoriaOut
 
@@ -8,14 +8,14 @@ from app.schemas.categoria import CategoriaOut
 class ProductoCreate(BaseModel):
     nombre: str
     sku: str
-    precio_venta: Decimal
+    precio_venta: Decimal = Field(gt=0)
     categoria_id: int | None = None
 
 
 class ProductoUpdate(BaseModel):
     nombre: str
     sku: str
-    precio_venta: Decimal
+    precio_venta: Decimal = Field(gt=0)
     categoria_id: int | None = None
 
 

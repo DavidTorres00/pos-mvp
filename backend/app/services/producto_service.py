@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.producto import Producto
@@ -23,8 +24,8 @@ def _validar_categoria(db: Session, categoria_id: int | None) -> None:
         raise CategoriaInvalidaError(categoria_id)
 
 
-def listar(db: Session, q: str | None = None) -> list[Producto]:
-    return producto_repository.get_all(db, q)
+def listar(db: Session, q: str | None, page: int, size: int) -> tuple[list[Producto], int]:
+    return producto_repository.get_all(db, q, page, size)
 
 
 def obtener(db: Session, producto_id: int) -> Producto:
@@ -39,7 +40,11 @@ def crear(db: Session, nombre: str, sku: str, precio_venta: Decimal, categoria_i
         raise SkuDuplicadoError(sku)
     _validar_categoria(db, categoria_id)
     producto = Producto(nombre=nombre, sku=sku, precio_venta=precio_venta, categoria_id=categoria_id)
-    return producto_repository.create(db, producto)
+    try:
+        with db.begin_nested():
+            return producto_repository.create(db, producto)
+    except IntegrityError:
+        raise SkuDuplicadoError(sku)
 
 
 def actualizar(
@@ -58,7 +63,11 @@ def actualizar(
     producto.sku = sku
     producto.precio_venta = precio_venta
     producto.categoria_id = categoria_id
-    return producto_repository.save(db, producto)
+    try:
+        with db.begin_nested():
+            return producto_repository.save(db, producto)
+    except IntegrityError:
+        raise SkuDuplicadoError(sku)
 
 
 def cambiar_estado(db: Session, producto_id: int, activo: bool) -> Producto:
