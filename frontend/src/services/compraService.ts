@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { Producto } from '@/services/productoService'
+import type { PaginatedResponse } from '@/services/pagination'
 
 export interface DetalleCompra {
   id: number
@@ -30,8 +31,14 @@ export interface CompraPayload {
   items: CompraItemPayload[]
 }
 
-export async function listCompras(): Promise<Compra[]> {
-  const { data } = await api.get<Compra[]>('/compras')
+export interface ListComprasParams {
+  page?: number
+  size?: number
+}
+
+export async function listCompras(params: ListComprasParams = {}): Promise<PaginatedResponse<Compra>> {
+  const { page, size } = params
+  const { data } = await api.get<PaginatedResponse<Compra>>('/compras', { params: { page, size } })
   return data
 }
 

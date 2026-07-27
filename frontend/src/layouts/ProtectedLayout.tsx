@@ -21,14 +21,14 @@ import { useLogout } from '@/features/auth/hooks/useLogout'
 import { useAuthStore } from '@/stores/authStore'
 
 const NAV_LINKS = [
-  { to: '/', label: 'Dashboard', end: true, icon: LayoutDashboardIcon },
-  { to: '/productos', label: 'Productos', icon: PackageIcon },
-  { to: '/categorias', label: 'Categorías', icon: TagIcon },
-  { to: '/inventario', label: 'Inventario', icon: BoxesIcon },
-  { to: '/caja', label: 'Caja', icon: PiggyBankIcon },
-  { to: '/compras', label: 'Compras', icon: ShoppingCartIcon },
-  { to: '/ventas', label: 'Ventas', icon: ReceiptIcon },
-  { to: '/reportes', label: 'Reportes', icon: BarChart3Icon },
+  { to: '/', label: 'Dashboard', end: true, icon: LayoutDashboardIcon, adminOnly: false },
+  { to: '/productos', label: 'Productos', icon: PackageIcon, adminOnly: false },
+  { to: '/categorias', label: 'Categorías', icon: TagIcon, adminOnly: false },
+  { to: '/inventario', label: 'Inventario', icon: BoxesIcon, adminOnly: false },
+  { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false },
+  { to: '/compras', label: 'Compras', icon: ShoppingCartIcon, adminOnly: true },
+  { to: '/ventas', label: 'Ventas', icon: ReceiptIcon, adminOnly: false },
+  { to: '/reportes', label: 'Reportes', icon: BarChart3Icon, adminOnly: true },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -49,6 +49,9 @@ export function ProtectedLayout() {
     return <Navigate to="/login" replace />
   }
 
+  const isAdmin = usuario?.role === 'admin'
+  const navLinks = NAV_LINKS.filter((link) => !link.adminOnly || isAdmin)
+
   return (
     <div className="flex min-h-svh">
       <aside className="sticky top-0 hidden h-svh w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar sm:flex">
@@ -58,7 +61,7 @@ export function ProtectedLayout() {
         </div>
 
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-0.5 px-2">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass}>
               <link.icon className="size-4 shrink-0" />
               {link.label}
@@ -103,7 +106,7 @@ export function ProtectedLayout() {
               aria-label="Principal (móvil)"
               className="flex animate-in flex-col gap-0.5 border-t px-2 py-2 fade-in-0 slide-in-from-top-2 duration-150"
             >
-              {NAV_LINKS.map((link) => (
+              {navLinks.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}

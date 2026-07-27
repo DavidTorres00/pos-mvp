@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from '@/components/DataStates'
 import { Pagination } from '@/components/Pagination'
 import { ProductoForm } from '@/features/productos/components/ProductoForm'
 import { ProductosTable } from '@/features/productos/components/ProductosTable'
-import { useCreateProducto, useSetEstadoProducto, useUpdateProducto } from '@/features/productos/hooks/useProductoMutations'
+import { useCrearProducto, useSetEstadoProducto, useUpdateProducto } from '@/features/productos/hooks/useProductoMutations'
 import { useProductos } from '@/features/productos/hooks/useProductos'
 import type { ProductoFormValues } from '@/features/productos/schemas/productoSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
@@ -15,15 +15,20 @@ import { useCrudDialogState } from '@/lib/hooks/useCrudDialogState'
 import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue'
 import { usePagination } from '@/lib/hooks/usePagination'
 import type { Producto } from '@/services/productoService'
+import { useAuthStore } from '@/stores/authStore'
 
 export function ProductosPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const dialog = useCrudDialogState<Producto>()
+  const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
 
-  const { data: productos = [], isLoading, isError } = useProductos(debouncedSearch)
-  const { pageItems, page, pageCount, setPage, total } = usePagination(productos, 10, debouncedSearch)
-  const create = useCreateProducto()
+  const { page, size, setPage } = usePagination(10, debouncedSearch)
+  const { data, isLoading, isError } = useProductos(debouncedSearch, page, size)
+  const productos = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
+  const create = useCrearProducto()
   const update = useUpdateProducto()
   const setEstado = useSetEstadoProducto()
 
@@ -47,23 +52,25 @@ export function ProductosPage() {
           className="max-w-xs"
           aria-label="Buscar productos"
         />
-        <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>Nuevo producto</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nuevo producto</DialogTitle>
-            </DialogHeader>
-            <ProductoForm
-              isPending={create.isPending}
-              errorMessage={
-                create.isError ? getApiErrorMessage(create.error, 'No se pudo crear el producto') : undefined
-              }
-              onSubmit={handleCreate}
-            />
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>Nuevo producto</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nuevo producto</DialogTitle>
+              </DialogHeader>
+              <ProductoForm
+                isPending={create.isPending}
+                errorMessage={
+                  create.isError ? getApiErrorMessage(create.error, 'No se pudo crear el producto') : undefined
+                }
+                onSubmit={handleCreate}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -73,7 +80,8 @@ export function ProductosPage() {
       ) : (
         <>
           <ProductosTable
-            productos={pageItems}
+            productos={productos}
+            canManage={isAdmin}
             onEdit={dialog.edit}
             onToggleEstado={(producto) => setEstado.mutate({ id: producto.id, activo: !producto.activo })}
           />

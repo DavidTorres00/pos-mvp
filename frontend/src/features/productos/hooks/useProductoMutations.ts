@@ -3,7 +3,7 @@ import { useOptimisticToggle } from '@/lib/hooks/useOptimisticToggle'
 import { createProducto, setEstadoProducto, updateProducto } from '@/services/productoService'
 import type { Producto, ProductoPayload } from '@/services/productoService'
 
-export function useCreateProducto() {
+export function useCrearProducto() {
   return useApiMutation((payload: ProductoPayload) => createProducto(payload), [['productos']])
 }
 

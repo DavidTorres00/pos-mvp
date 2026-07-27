@@ -21,8 +21,11 @@ export function VentasPage() {
   const [detalle, setDetalle] = useState<Venta | null>(null)
 
   const { data: caja, isLoading: isLoadingCaja } = useCajaActual()
-  const { data: ventas = [], isLoading, isError } = useVentas()
-  const { pageItems, page, pageCount, setPage, total } = usePagination(ventas, 10)
+  const { page, size, setPage } = usePagination(10)
+  const { data, isLoading, isError } = useVentas(page, size)
+  const ventas = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
   const crear = useCrearVenta()
 
   function handleCreate(values: VentaFormValues) {
@@ -74,7 +77,7 @@ export function VentasPage() {
         <ErrorState />
       ) : (
         <>
-          <VentasTable ventas={pageItems} onVerDetalle={setDetalle} />
+          <VentasTable ventas={ventas} onVerDetalle={setDetalle} />
           <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
         </>
       )}

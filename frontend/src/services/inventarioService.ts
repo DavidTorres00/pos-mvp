@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { Producto } from '@/services/productoService'
+import type { PaginatedResponse } from '@/services/pagination'
 
 export type TipoMovimiento = 'entrada' | 'salida'
 
@@ -20,9 +21,16 @@ export interface MovimientoPayload {
   motivo: string | null
 }
 
-export async function listMovimientos(productoId?: number): Promise<Movimiento[]> {
-  const { data } = await api.get<Movimiento[]>('/inventario/movimientos', {
-    params: productoId ? { producto_id: productoId } : undefined,
+export interface ListMovimientosParams {
+  productoId?: number
+  page?: number
+  size?: number
+}
+
+export async function listMovimientos(params: ListMovimientosParams = {}): Promise<PaginatedResponse<Movimiento>> {
+  const { productoId, page, size } = params
+  const { data } = await api.get<PaginatedResponse<Movimiento>>('/inventario/movimientos', {
+    params: { producto_id: productoId, page, size },
   })
   return data
 }

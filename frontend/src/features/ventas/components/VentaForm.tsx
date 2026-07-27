@@ -27,7 +27,10 @@ export function VentaForm({ isPending, errorMessage, onSubmit }: VentaFormProps)
     defaultValues: { items: [{ producto_id: null, cantidad: 1 }] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
-  const { data: productos = [] } = useProductos('')
+  // Fetches the largest page the backend allows (size=100) since this dropdown needs the
+  // full catalog, not a paginated slice.
+  const { data: productosData } = useProductos('', 1, 100)
+  const productos = productosData?.items ?? []
   const items = useWatch({ control, name: 'items' })
 
   const productoPorId = (id: number | null): Producto | undefined => productos.find((p) => p.id === id)

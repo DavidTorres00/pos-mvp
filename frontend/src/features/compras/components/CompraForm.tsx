@@ -38,7 +38,10 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
     defaultValues: { proveedor: '', items: [{ producto_id: null, cantidad: 1, costo_unitario: 0 }] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
-  const { data: productos = [] } = useProductos('')
+  // Fetches the largest page the backend allows (size=100) since this dropdown needs the
+  // full catalog, not a paginated slice.
+  const { data: productosData } = useProductos('', 1, 100)
+  const productos = productosData?.items ?? []
   const items = useWatch({ control, name: 'items' })
   const total = sumLineTotals(items, (item) => (item?.cantidad || 0) * (item?.costo_unitario || 0))
 

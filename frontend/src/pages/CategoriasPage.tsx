@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from '@/components/DataStates'
 import { Pagination } from '@/components/Pagination'
 import { CategoriaForm } from '@/features/categorias/components/CategoriaForm'
 import { CategoriasTable } from '@/features/categorias/components/CategoriasTable'
-import { useCreateCategoria, useSetEstadoCategoria, useUpdateCategoria } from '@/features/categorias/hooks/useCategoriaMutations'
+import { useCrearCategoria, useSetEstadoCategoria, useUpdateCategoria } from '@/features/categorias/hooks/useCategoriaMutations'
 import { useCategorias } from '@/features/categorias/hooks/useCategorias'
 import type { CategoriaFormValues } from '@/features/categorias/schemas/categoriaSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
@@ -15,15 +15,20 @@ import { useCrudDialogState } from '@/lib/hooks/useCrudDialogState'
 import { useDebouncedValue } from '@/lib/hooks/useDebouncedValue'
 import { usePagination } from '@/lib/hooks/usePagination'
 import type { Categoria } from '@/services/categoriaService'
+import { useAuthStore } from '@/stores/authStore'
 
 export function CategoriasPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const dialog = useCrudDialogState<Categoria>()
+  const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
 
-  const { data: categorias = [], isLoading, isError } = useCategorias(debouncedSearch)
-  const { pageItems, page, pageCount, setPage, total } = usePagination(categorias, 10, debouncedSearch)
-  const create = useCreateCategoria()
+  const { page, size, setPage } = usePagination(10, debouncedSearch)
+  const { data, isLoading, isError } = useCategorias(debouncedSearch, page, size)
+  const categorias = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
+  const create = useCrearCategoria()
   const update = useUpdateCategoria()
   const setEstado = useSetEstadoCategoria()
 
@@ -47,23 +52,25 @@ export function CategoriasPage() {
           className="max-w-xs"
           aria-label="Buscar categorías"
         />
-        <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>Nueva categoría</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nueva categoría</DialogTitle>
-            </DialogHeader>
-            <CategoriaForm
-              isPending={create.isPending}
-              errorMessage={
-                create.isError ? getApiErrorMessage(create.error, 'No se pudo crear la categoría') : undefined
-              }
-              onSubmit={handleCreate}
-            />
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>Nueva categoría</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nueva categoría</DialogTitle>
+              </DialogHeader>
+              <CategoriaForm
+                isPending={create.isPending}
+                errorMessage={
+                  create.isError ? getApiErrorMessage(create.error, 'No se pudo crear la categoría') : undefined
+                }
+                onSubmit={handleCreate}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -73,7 +80,8 @@ export function CategoriasPage() {
       ) : (
         <>
           <CategoriasTable
-            categorias={pageItems}
+            categorias={categorias}
+            canManage={isAdmin}
             onEdit={dialog.edit}
             onToggleEstado={(categoria) => setEstado.mutate({ id: categoria.id, activo: !categoria.activo })}
           />

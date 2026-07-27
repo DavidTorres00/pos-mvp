@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import type { PaginatedResponse } from '@/services/pagination'
 
 export interface Categoria {
   id: number
@@ -10,8 +11,17 @@ export interface CategoriaPayload {
   nombre: string
 }
 
-export async function listCategorias(q?: string): Promise<Categoria[]> {
-  const { data } = await api.get<Categoria[]>('/categorias', { params: q ? { q } : undefined })
+export interface ListCategoriasParams {
+  q?: string
+  page?: number
+  size?: number
+}
+
+export async function listCategorias(params: ListCategoriasParams = {}): Promise<PaginatedResponse<Categoria>> {
+  const { q, page, size } = params
+  const { data } = await api.get<PaginatedResponse<Categoria>>('/categorias', {
+    params: { q: q || undefined, page, size },
+  })
   return data
 }
 

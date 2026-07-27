@@ -5,6 +5,14 @@ import type { VentaPayload } from '@/services/ventaService'
 export function useCrearVenta() {
   return useApiMutation(
     (payload: VentaPayload) => createVenta(payload),
-    [['ventas'], ['productos'], ['movimientos'], ['caja-actual'], ['caja-resumen']],
+    [
+      ['ventas'],
+      ['productos'],
+      ['movimientos'],
+      ['caja-actual'],
+      ['caja-resumen'],
+      ['reporte-ventas-dia'],
+      ['reporte-caja'],
+    ],
   )
 }

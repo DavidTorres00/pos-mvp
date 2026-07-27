@@ -8,6 +8,19 @@ export const api = axios.create({
   withCredentials: true,
 })
 
+function readCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : undefined
+}
+
+api.interceptors.request.use((config) => {
+  const csrfToken = readCookie('csrf_token')
+  if (csrfToken) {
+    config.headers.set('X-CSRF-Token', csrfToken)
+  }
+  return config
+})
+
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {

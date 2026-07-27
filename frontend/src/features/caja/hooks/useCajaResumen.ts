@@ -10,10 +10,10 @@ export function useCajaResumen(cajaId: number | undefined) {
   })
 }
 
-export function useCajaMovimientos(cajaId: number | undefined) {
+export function useCajaMovimientos(cajaId: number | undefined, page = 1, size = 20) {
   return useQuery({
-    queryKey: ['caja-movimientos', cajaId],
-    queryFn: () => listMovimientosCaja(cajaId as number),
+    queryKey: ['caja-movimientos', cajaId, page, size],
+    queryFn: () => listMovimientosCaja(cajaId as number, { page, size }),
     enabled: cajaId !== undefined,
   })
 }

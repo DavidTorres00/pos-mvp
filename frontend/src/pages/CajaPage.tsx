@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { LoadingState } from '@/components/DataStates'
+import { ErrorState, LoadingState } from '@/components/DataStates'
 import { Pagination } from '@/components/Pagination'
 import { AperturaCajaForm } from '@/features/caja/components/AperturaCajaForm'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
@@ -17,10 +17,13 @@ import { formatCurrency, formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
 
 export function CajaPage() {
-  const { data: caja, isLoading } = useCajaActual()
-  const { data: resumen } = useCajaResumen(caja?.id)
-  const { data: movimientos = [] } = useCajaMovimientos(caja?.id)
-  const { pageItems, page, pageCount, setPage, total } = usePagination(movimientos, 10)
+  const { data: caja, isLoading, isError } = useCajaActual()
+  const { data: resumen, isError: isErrorResumen } = useCajaResumen(caja?.id)
+  const { page, size, setPage } = usePagination(10)
+  const { data: movimientosData, isError: isErrorMovimientos } = useCajaMovimientos(caja?.id, page, size)
+  const movimientos = movimientosData?.items ?? []
+  const total = movimientosData?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
   const abrir = useAbrirCaja()
   const cerrar = useCerrarCaja()
   const crearMovimiento = useCrearMovimientoCaja()
@@ -29,6 +32,10 @@ export function CajaPage() {
 
   if (isLoading) {
     return <LoadingState />
+  }
+
+  if (isError) {
+    return <ErrorState />
   }
 
   if (!caja) {
@@ -100,20 +107,31 @@ export function CajaPage() {
         </div>
       </div>
 
-      {resumen && (
-        <div className="flex flex-col gap-1.5 rounded-xl border bg-card p-4 text-sm shadow-sm">
-          <p className="flex justify-between tabular-nums">
-            <span className="text-muted-foreground">Monto inicial</span> {formatCurrency(resumen.caja.monto_inicial)}
-          </p>
-          <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">
-            <span className="font-medium text-foreground">Monto esperado ahora</span>{' '}
-            {formatCurrency(resumen.monto_esperado)}
-          </p>
-        </div>
+      {isErrorResumen ? (
+        <ErrorState message="No se pudo cargar el resumen de caja." />
+      ) : (
+        resumen && (
+          <div className="flex flex-col gap-1.5 rounded-xl border bg-card p-4 text-sm shadow-sm">
+            <p className="flex justify-between tabular-nums">
+              <span className="text-muted-foreground">Monto inicial</span>{' '}
+              {formatCurrency(resumen.caja.monto_inicial)}
+            </p>
+            <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">
+              <span className="font-medium text-foreground">Monto esperado ahora</span>{' '}
+              {formatCurrency(resumen.monto_esperado)}
+            </p>
+          </div>
+        )
       )}
 
-      <MovimientosCajaTable movimientos={pageItems} />
-      <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
+      {isErrorMovimientos ? (
+        <ErrorState message="No se pudieron cargar los movimientos de caja." />
+      ) : (
+        <>
+          <MovimientosCajaTable movimientos={movimientos} />
+          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
+        </>
+      )}
     </div>
   )
 }

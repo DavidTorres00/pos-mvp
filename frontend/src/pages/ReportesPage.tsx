@@ -7,19 +7,32 @@ import { Label } from '@/components/ui/label'
 import { LoadingState } from '@/components/DataStates'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { getReporteCaja, getVentasDia } from '@/services/reporteService'
+import { useAuthStore } from '@/stores/authStore'
 
 export function ReportesPage() {
   const [fecha, setFecha] = useState('')
+  const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
 
   const { data: ventasDia, isLoading: isLoadingVentas } = useQuery({
     queryKey: ['reporte-ventas-dia', fecha],
     queryFn: () => getVentasDia(fecha || undefined),
+    enabled: isAdmin,
   })
   const { data: reporteCaja, isLoading: isLoadingCaja } = useQuery({
     queryKey: ['reporte-caja'],
     queryFn: getReporteCaja,
+    enabled: isAdmin,
     retry: false,
   })
+
+  if (!isAdmin) {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4 p-6">
+        <h1 className="text-xl font-semibold tracking-tight">Reportes</h1>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex max-w-2xl flex-col gap-4 p-6">

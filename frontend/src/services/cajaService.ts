@@ -1,4 +1,5 @@
 import { api } from '@/services/api'
+import type { PaginatedResponse } from '@/services/pagination'
 
 export type TipoMovimientoCaja = 'entrada' | 'salida'
 
@@ -56,8 +57,19 @@ export async function crearMovimientoCaja(payload: MovimientoCajaPayload): Promi
   return data
 }
 
-export async function listMovimientosCaja(cajaId: number): Promise<MovimientoCaja[]> {
-  const { data } = await api.get<MovimientoCaja[]>('/caja/movimientos', { params: { caja_id: cajaId } })
+export interface ListMovimientosCajaParams {
+  page?: number
+  size?: number
+}
+
+export async function listMovimientosCaja(
+  cajaId: number,
+  params: ListMovimientosCajaParams = {},
+): Promise<PaginatedResponse<MovimientoCaja>> {
+  const { page, size } = params
+  const { data } = await api.get<PaginatedResponse<MovimientoCaja>>('/caja/movimientos', {
+    params: { caja_id: cajaId, page, size },
+  })
   return data
 }
 

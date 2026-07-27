@@ -31,9 +31,11 @@ const MODULOS = [
 
 export function DashboardPage() {
   const usuario = useAuthStore((state) => state.usuario)
+  const isAdmin = usuario?.role === 'admin'
   const { data: ventasDia, isLoading: isLoadingVentas } = useQuery({
     queryKey: ['reporte-ventas-dia'],
     queryFn: () => getVentasDia(),
+    enabled: isAdmin,
   })
   const { data: caja, isLoading: isLoadingCaja } = useCajaActual()
   const { data: resumen } = useCajaResumen(caja?.id)
@@ -66,7 +68,9 @@ export function DashboardPage() {
             </span>
           </CardHeader>
           <CardContent>
-            {isLoadingVentas || !ventasDia ? (
+            {!isAdmin ? (
+              <p className="text-sm text-muted-foreground">Disponible solo para administradores.</p>
+            ) : isLoadingVentas || !ventasDia ? (
               <LoadingState />
             ) : (
               <div className="flex flex-col gap-1">
@@ -131,7 +135,7 @@ export function DashboardPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Accesos rápidos</h2>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {MODULOS.map((modulo) => (
+          {MODULOS.filter((modulo) => isAdmin || (modulo.to !== '/compras' && modulo.to !== '/reportes')).map((modulo) => (
             <Link
               key={modulo.to}
               to={modulo.to}

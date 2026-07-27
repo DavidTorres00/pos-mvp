@@ -11,11 +11,16 @@ import { useMovimientos } from '@/features/inventario/hooks/useMovimientos'
 import type { MovimientoFormValues } from '@/features/inventario/schemas/movimientoSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { usePagination } from '@/lib/hooks/usePagination'
+import { useAuthStore } from '@/stores/authStore'
 
 export function InventarioPage() {
   const [open, setOpen] = useState(false)
-  const { data: movimientos = [], isLoading, isError } = useMovimientos()
-  const { pageItems, page, pageCount, setPage, total } = usePagination(movimientos, 10)
+  const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
+  const { page, size, setPage } = usePagination(10)
+  const { data, isLoading, isError } = useMovimientos(page, size)
+  const movimientos = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
   const crear = useCrearMovimiento()
 
   function handleSubmit(values: MovimientoFormValues) {
@@ -26,23 +31,25 @@ export function InventarioPage() {
     <div className="flex max-w-4xl flex-col gap-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold tracking-tight">Inventario</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>Registrar movimiento</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Registrar movimiento</DialogTitle>
-            </DialogHeader>
-            <MovimientoForm
-              isPending={crear.isPending}
-              errorMessage={
-                crear.isError ? getApiErrorMessage(crear.error, 'No se pudo registrar el movimiento') : undefined
-              }
-              onSubmit={handleSubmit}
-            />
-          </DialogContent>
-        </Dialog>
+        {isAdmin && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>Registrar movimiento</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Registrar movimiento</DialogTitle>
+              </DialogHeader>
+              <MovimientoForm
+                isPending={crear.isPending}
+                errorMessage={
+                  crear.isError ? getApiErrorMessage(crear.error, 'No se pudo registrar el movimiento') : undefined
+                }
+                onSubmit={handleSubmit}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {isLoading ? (
@@ -51,7 +58,7 @@ export function InventarioPage() {
         <ErrorState />
       ) : (
         <>
-          <MovimientosTable movimientos={pageItems} />
+          <MovimientosTable movimientos={movimientos} />
           <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
         </>
       )}

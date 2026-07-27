@@ -26,7 +26,10 @@ export function ProductoForm({ defaultValues, isPending, errorMessage, onSubmit 
     resolver: zodResolver(productoSchema),
     defaultValues: defaultValues ?? { categoria_id: null },
   })
-  const { data: categorias = [] } = useCategorias('')
+  // Fetches the largest page the backend allows (size=100) since this dropdown needs the
+  // full catalog, not a paginated slice.
+  const { data: categoriasData } = useCategorias('', 1, 100)
+  const categorias = categoriasData?.items ?? []
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>

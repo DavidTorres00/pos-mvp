@@ -3,7 +3,7 @@ import { useOptimisticToggle } from '@/lib/hooks/useOptimisticToggle'
 import { createCategoria, setEstadoCategoria, updateCategoria } from '@/services/categoriaService'
 import type { Categoria, CategoriaPayload } from '@/services/categoriaService'
 
-export function useCreateCategoria() {
+export function useCrearCategoria() {
   return useApiMutation((payload: CategoriaPayload) => createCategoria(payload), [['categorias']])
 }
 

@@ -23,7 +23,10 @@ export function MovimientoForm({ isPending, errorMessage, onSubmit }: Movimiento
     resolver: zodResolver(movimientoSchema),
     defaultValues: { tipo: 'entrada' },
   })
-  const { data: productos = [] } = useProductos('')
+  // Fetches the largest page the backend allows (size=100) since this dropdown needs the
+  // full catalog, not a paginated slice.
+  const { data: productosData } = useProductos('', 1, 100)
+  const productos = productosData?.items ?? []
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>

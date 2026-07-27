@@ -6,6 +6,7 @@ export interface Usuario {
   email: string
   nombre: string
   activo: boolean
+  role: 'admin' | 'cajero'
 }
 
 interface AuthState {

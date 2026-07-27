@@ -13,13 +13,18 @@ import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
 import type { Compra } from '@/services/compraService'
+import { useAuthStore } from '@/stores/authStore'
 
 export function ComprasPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [detalle, setDetalle] = useState<Compra | null>(null)
+  const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
 
-  const { data: compras = [], isLoading, isError } = useCompras()
-  const { pageItems, page, pageCount, setPage, total } = usePagination(compras, 10)
+  const { page, size, setPage } = usePagination(10)
+  const { data, isLoading, isError } = useCompras(page, size, isAdmin)
+  const compras = data?.items ?? []
+  const total = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(total / size))
   const crear = useCrearCompra()
 
   function handleCreate(values: CompraFormValues) {
@@ -29,6 +34,15 @@ export function ComprasPage() {
       items: values.items.map((item) => ({ ...item, producto_id: item.producto_id as number })),
     }
     crear.mutate(payload, { onSuccess: () => setCreateOpen(false) })
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex max-w-4xl flex-col gap-4 p-6">
+        <h1 className="text-xl font-semibold tracking-tight">Compras</h1>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+      </div>
+    )
   }
 
   return (
@@ -60,7 +74,7 @@ export function ComprasPage() {
         <ErrorState />
       ) : (
         <>
-          <ComprasTable compras={pageItems} onVerDetalle={setDetalle} />
+          <ComprasTable compras={compras} onVerDetalle={setDetalle} />
           <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
         </>
       )}
