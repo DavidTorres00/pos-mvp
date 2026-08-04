@@ -2,8 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { TableCard } from '@/components/TableCard'
 import { CompraForm } from '@/features/compras/components/CompraForm'
 import { ComprasTable } from '@/features/compras/components/ComprasTable'
 import { useCompras } from '@/features/compras/hooks/useCompras'
@@ -38,22 +37,22 @@ export function ComprasPage() {
 
   if (!isAdmin) {
     return (
-      <div className="flex max-w-4xl flex-col gap-4 p-6">
+      <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Compras</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold tracking-tight">Compras</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>Nueva compra</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle>Nueva compra</DialogTitle>
             </DialogHeader>
@@ -68,16 +67,16 @@ export function ComprasPage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : (
-        <>
-          <ComprasTable compras={compras} onVerDetalle={setDetalle} />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <ComprasTable compras={compras} onVerDetalle={setDetalle} />
+      </TableCard>
 
       <Dialog open={detalle !== null} onOpenChange={(open) => !open && setDetalle(null)}>
         <DialogContent>

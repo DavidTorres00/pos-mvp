@@ -1,11 +1,12 @@
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { EmptyState } from '@/components/DataStates'
+import { TableCard } from '@/components/TableCard'
 import { useAuditoria } from '@/features/auditoria/hooks/useAuditoria'
 import { formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
@@ -14,6 +15,7 @@ import { useAuthStore } from '@/stores/authStore'
 const ENTIDADES = [
   { value: 'usuario', label: 'Usuarios' },
   { value: 'producto', label: 'Productos' },
+  { value: 'movimiento_inventario', label: 'Movimientos de inventario' },
   { value: 'caja_sesion', label: 'Caja (apertura/cierre)' },
   { value: 'movimiento_caja', label: 'Movimientos de caja' },
   { value: 'venta', label: 'Ventas' },
@@ -29,6 +31,9 @@ const ACCION_LABELS: Record<string, string> = {
   producto_creado: 'Producto creado',
   producto_precio_cambiado: 'Cambio de precio',
   producto_estado_cambiado: 'Cambio de estado',
+  movimiento_inventario_registrado: 'Movimiento de inventario registrado',
+  usuario_creado: 'Usuario creado',
+  usuario_permisos_cambiados: 'Cambio de permisos de usuario',
   caja_abierta: 'Caja abierta',
   caja_cerrada: 'Caja cerrada',
   caja_movimiento_entrada: 'Entrada de efectivo',
@@ -68,18 +73,25 @@ export function AuditoriaPage() {
   const eventos = data?.items ?? []
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / size))
+  const hayFiltrosActivos = entidad !== '' || desde !== '' || hasta !== ''
+
+  function limpiarFiltros() {
+    setEntidad('')
+    setDesde('')
+    setHasta('')
+  }
 
   if (!isAdmin) {
     return (
       <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Auditoría</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex max-w-5xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold tracking-tight">Auditoría</h1>
       <p className="text-sm text-muted-foreground">Historial de quién hizo qué en el sistema.</p>
 
@@ -108,16 +120,27 @@ export function AuditoriaPage() {
           <Label htmlFor="auditoria-hasta">Hasta</Label>
           <Input id="auditoria-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="w-auto" />
         </div>
+        {hayFiltrosActivos && (
+          <Button variant="ghost" onClick={limpiarFiltros}>
+            Limpiar filtros
+          </Button>
+        )}
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : eventos.length === 0 ? (
-        <EmptyState message="No hay eventos para este filtro." />
-      ) : (
-        <>
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        {eventos.length === 0 ? (
+          <EmptyState
+            message={hayFiltrosActivos ? 'No hay eventos que coincidan con estos filtros.' : 'No hay eventos registrados.'}
+            bordered={false}
+          />
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -140,9 +163,8 @@ export function AuditoriaPage() {
               ))}
             </TableBody>
           </Table>
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+        )}
+      </TableCard>
     </div>
   )
 }

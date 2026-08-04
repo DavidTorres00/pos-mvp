@@ -26,6 +26,10 @@ def get_by_sku(db: Session, sku: str) -> Producto | None:
     return db.scalar(select(Producto).where(Producto.sku == sku))
 
 
+def get_skus_con_prefijo(db: Session, prefijo: str) -> list[str]:
+    return list(db.scalars(select(Producto.sku).where(Producto.sku.like(f"{prefijo}%"))))
+
+
 def create(db: Session, producto: Producto) -> Producto:
     db.add(producto)
     db.flush()

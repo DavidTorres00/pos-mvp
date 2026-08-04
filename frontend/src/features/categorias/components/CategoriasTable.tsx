@@ -19,15 +19,24 @@ import type { Categoria } from '@/services/categoriaService'
 interface CategoriasTableProps {
   categorias: Categoria[]
   canManage: boolean
+  emptyMessage?: string
   onEdit: (categoria: Categoria) => void
   onToggleEstado: (categoria: Categoria) => void
+  onManageSubcategorias: (categoria: Categoria) => void
 }
 
-export function CategoriasTable({ categorias, canManage, onEdit, onToggleEstado }: CategoriasTableProps) {
+export function CategoriasTable({
+  categorias,
+  canManage,
+  emptyMessage = 'No hay categorías.',
+  onEdit,
+  onToggleEstado,
+  onManageSubcategorias,
+}: CategoriasTableProps) {
   const [pending, setPending] = useState<Categoria | null>(null)
 
   if (categorias.length === 0) {
-    return <EmptyState message="No hay categorías." />
+    return <EmptyState message={emptyMessage} bordered={false} />
   }
 
   return (
@@ -63,11 +72,16 @@ export function CategoriasTable({ categorias, canManage, onEdit, onToggleEstado 
                 )}
               </TableCell>
               <TableCell>
-                {canManage && (
-                  <Button variant="outline" size="sm" onClick={() => onEdit(categoria)}>
-                    Editar
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => onManageSubcategorias(categoria)}>
+                    Subcategorías
                   </Button>
-                )}
+                  {canManage && (
+                    <Button variant="outline" size="sm" onClick={() => onEdit(categoria)}>
+                      Editar
+                    </Button>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/categorias", tags=["categorias"], dependencies=[Depe
 solo_admin = Depends(require_role(RolUsuario.ADMIN))
 
 
-@router.get("", response_model=Pagina[CategoriaOut])
+@router.get("", response_model=Pagina[CategoriaOut], dependencies=[solo_admin])
 def listar(
     q: str | None = None,
     paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
@@ -32,7 +32,7 @@ def crear(payload: CategoriaCreate, db: Session = Depends(get_db)) -> CategoriaO
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre ya está en uso")
 
 
-@router.get("/{categoria_id}", response_model=CategoriaOut)
+@router.get("/{categoria_id}", response_model=CategoriaOut, dependencies=[solo_admin])
 def obtener(categoria_id: int, db: Session = Depends(get_db)) -> CategoriaOut:
     try:
         return categoria_service.obtener(db, categoria_id)

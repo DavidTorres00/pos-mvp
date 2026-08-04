@@ -28,7 +28,7 @@ export function ConfiguracionPage() {
     return (
       <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Configuración</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }

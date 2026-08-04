@@ -18,7 +18,7 @@ interface VentasTableProps {
 
 export function VentasTable({ ventas, onVerDetalle }: VentasTableProps) {
   if (ventas.length === 0) {
-    return <EmptyState message="No hay ventas registradas." />
+    return <EmptyState message="No hay ventas registradas." bordered={false} />
   }
 
   return (

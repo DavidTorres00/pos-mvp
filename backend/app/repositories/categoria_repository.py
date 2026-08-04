@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.categoria import Categoria
@@ -10,6 +10,10 @@ def get_all(db: Session, q: str | None, page: int, size: int) -> tuple[list[Cate
     if q:
         stmt = stmt.where(Categoria.nombre.ilike(f"%{q}%"))
     return paginar(db, stmt, page, size)
+
+
+def get_max_codigo(db: Session) -> str | None:
+    return db.scalar(select(func.max(Categoria.codigo)))
 
 
 def get_by_id(db: Session, categoria_id: int) -> Categoria | None:

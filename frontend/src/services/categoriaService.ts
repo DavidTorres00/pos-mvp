@@ -4,6 +4,7 @@ import type { PaginatedResponse } from '@/services/pagination'
 export interface Categoria {
   id: number
   nombre: string
+  codigo: string
   activo: boolean
 }
 

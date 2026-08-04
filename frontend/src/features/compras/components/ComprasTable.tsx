@@ -6,12 +6,13 @@ import type { Compra } from '@/services/compraService'
 
 interface ComprasTableProps {
   compras: Compra[]
+  emptyMessage?: string
   onVerDetalle: (compra: Compra) => void
 }
 
-export function ComprasTable({ compras, onVerDetalle }: ComprasTableProps) {
+export function ComprasTable({ compras, emptyMessage = 'No hay compras registradas.', onVerDetalle }: ComprasTableProps) {
   if (compras.length === 0) {
-    return <EmptyState message="No hay compras registradas." />
+    return <EmptyState message={emptyMessage} bordered={false} />
   }
 
   return (

@@ -81,6 +81,15 @@ Pedido explícito del cliente tras usar la Fase 1 en producción: auditoría, co
 6. Pago a proveedor vía OpenPay — V1 con aprobación admin obligatoria, nunca 100% automático.
 7. Ventas con forma de pago (efectivo/tarjeta/transferencia).
 
+### Fase 3 — catalogación real y consistencia de UI
+Pedido explícito del cliente: el catálogo plano de categorías no reflejaba cómo se organiza el inventario real de una tienda de abarrotes, y el UI había crecido con inconsistencias visuales entre módulos.
+1. Categorías → Subcategorías (2 niveles, código auto-secuencial), catálogo semilla de 12/62 desde `docs/info-categorias-productos.pdf`. SKU autogenerado al categorizar un producto por subcategoría.
+2. Gestión de usuarios: alta de cajero vía API (antes solo por script/DB directa).
+3. Auditoría de movimientos de inventario (hueco cerrado, no dejaban rastro) + fix de rango de fechas (`hasta` excluía el día actual) en Auditoría e Inventario.
+4. `stock_resultante` en movimientos de inventario — snapshot histórico correcto, no el stock en vivo del producto.
+5. Restricción de lectura admin-only en Categorías/Subcategorías/Inventario (antes visibles a cualquier logueado).
+6. Unificación visual de todas las páginas de listado (`TableCard`, ancho fluido `w-full`, filtros con "Limpiar filtros", encabezados de tabla con fondo).
+
 ## Reglas
 - Código limpio.
 - DRY, KISS, YAGNI.

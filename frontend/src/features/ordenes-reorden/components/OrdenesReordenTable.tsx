@@ -35,6 +35,7 @@ const ESTADO_VARIANT: Record<OrdenReorden['estado'], 'default' | 'secondary' | '
 
 interface OrdenesReordenTableProps {
   ordenes: OrdenReorden[]
+  emptyMessage?: string
   onAprobar: (orden: OrdenReorden) => void
   onRechazar: (orden: OrdenReorden) => void
   aprobarPending: boolean
@@ -43,6 +44,7 @@ interface OrdenesReordenTableProps {
 
 export function OrdenesReordenTable({
   ordenes,
+  emptyMessage = 'No hay órdenes de reorden.',
   onAprobar,
   onRechazar,
   aprobarPending,
@@ -51,7 +53,7 @@ export function OrdenesReordenTable({
   const [confirmando, setConfirmando] = useState<OrdenReorden | null>(null)
 
   if (ordenes.length === 0) {
-    return <EmptyState message="No hay órdenes de reorden." />
+    return <EmptyState message={emptyMessage} bordered={false} />
   }
 
   return (

@@ -11,6 +11,7 @@ from app.modules.productos.router import router as productos_router
 from app.modules.proveedores.router import router as proveedores_router
 from app.modules.reglas_reorden.router import router as reglas_reorden_router
 from app.modules.reportes.router import router as reportes_router
+from app.modules.subcategorias.router import router as subcategorias_router
 from app.modules.usuarios.router import router as usuarios_router
 from app.modules.usuarios.router import usuarios_router as usuarios_gestion_router
 from app.modules.ventas.router import router as ventas_router
@@ -22,6 +23,7 @@ api_router.include_router(auditoria_router)
 api_router.include_router(configuracion_router)
 api_router.include_router(productos_router)
 api_router.include_router(categorias_router)
+api_router.include_router(subcategorias_router)
 api_router.include_router(inventario_router)
 api_router.include_router(caja_router)
 api_router.include_router(proveedores_router)

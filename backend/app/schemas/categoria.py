@@ -18,4 +18,5 @@ class CategoriaOut(BaseModel):
 
     id: int
     nombre: str
+    codigo: str
     activo: bool

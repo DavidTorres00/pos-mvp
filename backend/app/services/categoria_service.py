@@ -24,12 +24,18 @@ def obtener(db: Session, categoria_id: int) -> Categoria:
     return categoria
 
 
+def _siguiente_codigo(db: Session) -> str:
+    max_codigo = categoria_repository.get_max_codigo(db)
+    return f"{(int(max_codigo) + 1) if max_codigo else 1:02d}"
+
+
 def crear(db: Session, nombre: str) -> Categoria:
     if categoria_repository.get_by_nombre(db, nombre) is not None:
         raise NombreDuplicadoError(nombre)
     try:
         with db.begin_nested():
-            return categoria_repository.create(db, Categoria(nombre=nombre))
+            codigo = _siguiente_codigo(db)
+            return categoria_repository.create(db, Categoria(nombre=nombre, codigo=codigo))
     except IntegrityError:
         raise NombreDuplicadoError(nombre)
 

@@ -10,7 +10,7 @@ interface MovimientosCajaTableProps {
 
 export function MovimientosCajaTable({ movimientos }: MovimientosCajaTableProps) {
   if (movimientos.length === 0) {
-    return <EmptyState message="Sin movimientos manuales en este turno." />
+    return <EmptyState message="Sin movimientos manuales en este turno." bordered={false} />
   }
 
   return (

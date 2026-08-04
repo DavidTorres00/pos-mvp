@@ -1,8 +1,9 @@
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { ErrorState } from '@/components/DataStates'
+import { TableCard } from '@/components/TableCard'
 import { OrdenesReordenTable } from '@/features/ordenes-reorden/components/OrdenesReordenTable'
 import { useAprobarOrdenReorden, useRechazarOrdenReorden } from '@/features/ordenes-reorden/hooks/useOrdenReordenMutations'
 import { useOrdenesReorden } from '@/features/ordenes-reorden/hooks/useOrdenesReorden'
@@ -29,18 +30,19 @@ export function OrdenesReordenPage() {
   const pageCount = Math.max(1, Math.ceil(total / size))
   const aprobar = useAprobarOrdenReorden()
   const rechazar = useRechazarOrdenReorden()
+  const hayFiltrosActivos = estado !== 'todos'
 
   if (!isAdmin) {
     return (
       <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Órdenes de reorden</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex max-w-5xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Órdenes de reorden</h1>
         <p className="text-sm text-muted-foreground">
@@ -48,41 +50,47 @@ export function OrdenesReordenPage() {
         </p>
       </div>
 
-      <Select value={estado} onValueChange={(value) => setEstado(value as EstadoOrdenReorden | 'todos')}>
-        <SelectTrigger className="w-48">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {ESTADOS.map((opcion) => (
-            <SelectItem key={opcion.value} value={opcion.value}>
-              {opcion.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex flex-wrap items-end gap-3">
+        <Select value={estado} onValueChange={(value) => setEstado(value as EstadoOrdenReorden | 'todos')}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ESTADOS.map((opcion) => (
+              <SelectItem key={opcion.value} value={opcion.value}>
+                {opcion.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hayFiltrosActivos && (
+          <Button variant="ghost" onClick={() => setEstado('todos')}>
+            Limpiar filtros
+          </Button>
+        )}
+      </div>
 
       {(aprobar.isError || rechazar.isError) && (
-        <ErrorState
-          message={getApiErrorMessage(aprobar.error ?? rechazar.error, 'No se pudo procesar la orden')}
-        />
+        <ErrorState message={getApiErrorMessage(aprobar.error ?? rechazar.error, 'No se pudo procesar la orden')} />
       )}
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : (
-        <>
-          <OrdenesReordenTable
-            ordenes={ordenes}
-            onAprobar={(orden) => aprobar.mutate(orden.id)}
-            onRechazar={(orden) => rechazar.mutate(orden.id)}
-            aprobarPending={aprobar.isPending}
-            rechazarPending={rechazar.isPending}
-          />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <OrdenesReordenTable
+          ordenes={ordenes}
+          emptyMessage={hayFiltrosActivos ? 'No hay órdenes con este estado.' : 'No hay órdenes de reorden.'}
+          onAprobar={(orden) => aprobar.mutate(orden.id)}
+          onRechazar={(orden) => rechazar.mutate(orden.id)}
+          aprobarPending={aprobar.isPending}
+          rechazarPending={rechazar.isPending}
+        />
+      </TableCard>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { AlertTriangleIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { TableCard } from '@/components/TableCard'
 import { AperturaCajaForm } from '@/features/caja/components/AperturaCajaForm'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
 import { MovimientoCajaForm } from '@/features/caja/components/MovimientoCajaForm'
@@ -32,7 +32,11 @@ export function CajaPage() {
   const caja = cajaActual?.caja
   const { data: resumen, isError: isErrorResumen } = useCajaResumen(caja?.id)
   const { page, size, setPage } = usePagination(10)
-  const { data: movimientosData, isError: isErrorMovimientos } = useCajaMovimientos(caja?.id, page, size)
+  const {
+    data: movimientosData,
+    isLoading: isLoadingMovimientos,
+    isError: isErrorMovimientos,
+  } = useCajaMovimientos(caja?.id, page, size)
   const movimientos = movimientosData?.items ?? []
   const total = movimientosData?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / size))
@@ -69,7 +73,7 @@ export function CajaPage() {
   }
 
   return (
-    <div className="flex max-w-2xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-xl font-semibold tracking-tight">Caja abierta desde {formatDateTime(caja.fecha_apertura)}</h1>
         <div className="flex gap-2">
@@ -180,14 +184,17 @@ export function CajaPage() {
         )
       )}
 
-      {isErrorMovimientos ? (
-        <ErrorState message="No se pudieron cargar los movimientos de caja." />
-      ) : (
-        <>
-          <MovimientosCajaTable movimientos={movimientos} />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoadingMovimientos}
+        isError={isErrorMovimientos}
+        errorMessage="No se pudieron cargar los movimientos de caja."
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <MovimientosCajaTable movimientos={movimientos} />
+      </TableCard>
 
       <VoucherRetiroDialog voucher={voucher} onClose={() => setVoucher(null)} />
     </div>

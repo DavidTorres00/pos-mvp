@@ -15,8 +15,19 @@ export interface ListUsuariosParams {
   size?: number
 }
 
+export interface UsuarioCreatePayload {
+  email: string
+  nombre: string
+  password: string
+}
+
 export async function listUsuarios(params: ListUsuariosParams = {}): Promise<PaginatedResponse<Usuario>> {
   const { data } = await api.get<PaginatedResponse<Usuario>>('/usuarios', { params })
+  return data
+}
+
+export async function createUsuario(payload: UsuarioCreatePayload): Promise<Usuario> {
+  const { data } = await api.post<Usuario>('/usuarios', payload)
   return data
 }
 

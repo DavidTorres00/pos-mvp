@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { TableCard } from '@/components/TableCard'
 import { ReglaReordenForm } from '@/features/reglas-reorden/components/ReglaReordenForm'
 import { ReglasReordenTable } from '@/features/reglas-reorden/components/ReglasReordenTable'
 import {
@@ -33,7 +32,7 @@ export function ReglasReordenPage() {
     return (
       <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Reglas de reorden</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }
@@ -68,7 +67,7 @@ export function ReglasReordenPage() {
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Reglas de reorden</h1>
@@ -93,20 +92,20 @@ export function ReglasReordenPage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : (
-        <>
-          <ReglasReordenTable
-            reglas={reglas}
-            onEdit={dialog.edit}
-            onToggleEstado={(regla) => setEstado.mutate({ id: regla.id, activo: !regla.activo })}
-          />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <ReglasReordenTable
+          reglas={reglas}
+          onEdit={dialog.edit}
+          onToggleEstado={(regla) => setEstado.mutate({ id: regla.id, activo: !regla.activo })}
+        />
+      </TableCard>
 
       <Dialog open={dialog.editing !== null} onOpenChange={(open) => !open && dialog.closeEdit()}>
         <DialogContent>

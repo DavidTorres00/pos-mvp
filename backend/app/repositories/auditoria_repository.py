@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -30,5 +30,6 @@ def get_all(
     if desde is not None:
         stmt = stmt.where(Auditoria.created_at >= desde)
     if hasta is not None:
-        stmt = stmt.where(Auditoria.created_at <= hasta)
+        # 'hasta' llega como fecha (medianoche); se incluye el día completo, no solo hasta las 00:00
+        stmt = stmt.where(Auditoria.created_at < hasta + timedelta(days=1))
     return paginar(db, stmt, page, size)

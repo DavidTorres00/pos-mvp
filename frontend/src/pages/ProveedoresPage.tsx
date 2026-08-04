@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { TableCard } from '@/components/TableCard'
 import { ProveedorForm } from '@/features/proveedores/components/ProveedorForm'
 import { ProveedoresTable } from '@/features/proveedores/components/ProveedoresTable'
 import {
@@ -35,6 +34,7 @@ export function ProveedoresPage() {
   const create = useCrearProveedor()
   const update = useUpdateProveedor()
   const setEstado = useSetEstadoProveedor()
+  const hayFiltrosActivos = search !== ''
 
   function handleCreate(values: ProveedorFormValues) {
     create.mutate(values, { onSuccess: dialog.closeCreate })
@@ -49,22 +49,29 @@ export function ProveedoresPage() {
     return (
       <div className="flex max-w-2xl flex-col gap-4 p-6">
         <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
-        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tenés acceso a este módulo.</p>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">No tienes acceso a este módulo.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold tracking-tight">Proveedores</h1>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Input
-          placeholder="Buscar por nombre..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-          aria-label="Buscar proveedores"
-        />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-1 flex-wrap items-end gap-3">
+          <Input
+            placeholder="Buscar por nombre..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-sm"
+            aria-label="Buscar proveedores"
+          />
+          {hayFiltrosActivos && (
+            <Button variant="ghost" onClick={() => setSearch('')}>
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
         <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
           <DialogTrigger asChild>
             <Button>Nuevo proveedor</Button>
@@ -84,20 +91,21 @@ export function ProveedoresPage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : (
-        <>
-          <ProveedoresTable
-            proveedores={proveedores}
-            onEdit={dialog.edit}
-            onToggleEstado={(proveedor) => setEstado.mutate({ id: proveedor.id, activo: !proveedor.activo })}
-          />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <ProveedoresTable
+          proveedores={proveedores}
+          emptyMessage={hayFiltrosActivos ? 'No hay proveedores que coincidan con tu búsqueda.' : 'No hay proveedores.'}
+          onEdit={dialog.edit}
+          onToggleEstado={(proveedor) => setEstado.mutate({ id: proveedor.id, activo: !proveedor.activo })}
+        />
+      </TableCard>
 
       <Dialog open={dialog.editing !== null} onOpenChange={(open) => !open && dialog.closeEdit()}>
         <DialogContent>

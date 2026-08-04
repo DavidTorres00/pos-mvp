@@ -21,12 +21,18 @@ import { getVentasDia } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
 const MODULOS = [
-  { to: '/productos', label: 'Productos', description: 'Catálogo y precios', icon: PackageIcon },
-  { to: '/categorias', label: 'Categorías', description: 'Organiza tu catálogo', icon: TagIcon },
-  { to: '/inventario', label: 'Inventario', description: 'Entradas y salidas de stock', icon: BoxesIcon },
-  { to: '/compras', label: 'Compras', description: 'Registra compras a proveedores', icon: ShoppingCartIcon },
-  { to: '/ventas', label: 'Ventas', description: 'Registra ventas del día', icon: ReceiptIcon },
-  { to: '/reportes', label: 'Reportes', description: 'Resumen de ventas y caja', icon: BarChart3Icon },
+  { to: '/productos', label: 'Productos', description: 'Catálogo y precios', icon: PackageIcon, adminOnly: false },
+  { to: '/categorias', label: 'Categorías', description: 'Organiza tu catálogo', icon: TagIcon, adminOnly: true },
+  { to: '/inventario', label: 'Inventario', description: 'Entradas y salidas de stock', icon: BoxesIcon, adminOnly: true },
+  {
+    to: '/compras',
+    label: 'Compras',
+    description: 'Registra compras a proveedores',
+    icon: ShoppingCartIcon,
+    adminOnly: true,
+  },
+  { to: '/ventas', label: 'Ventas', description: 'Registra ventas del día', icon: ReceiptIcon, adminOnly: false },
+  { to: '/reportes', label: 'Reportes', description: 'Resumen de ventas y caja', icon: BarChart3Icon, adminOnly: true },
 ]
 
 export function DashboardPage() {
@@ -54,7 +60,7 @@ export function DashboardPage() {
   const desgloseTotal = desglose.reduce((sum, item) => sum + Math.abs(item.value), 0)
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6 p-6">
+    <div className="flex w-full flex-col gap-6 p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Hola, {usuario?.nombre ?? 'de nuevo'}</h1>
         <p className="text-sm text-muted-foreground">Esto es lo que pasa hoy en tu negocio.</p>
@@ -136,7 +142,7 @@ export function DashboardPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Accesos rápidos</h2>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {MODULOS.filter((modulo) => isAdmin || (modulo.to !== '/compras' && modulo.to !== '/reportes')).map((modulo) => (
+          {MODULOS.filter((modulo) => !modulo.adminOnly || isAdmin).map((modulo) => (
             <Link
               key={modulo.to}
               to={modulo.to}

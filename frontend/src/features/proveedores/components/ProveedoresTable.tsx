@@ -18,15 +18,21 @@ import type { Proveedor } from '@/services/proveedorService'
 
 interface ProveedoresTableProps {
   proveedores: Proveedor[]
+  emptyMessage?: string
   onEdit: (proveedor: Proveedor) => void
   onToggleEstado: (proveedor: Proveedor) => void
 }
 
-export function ProveedoresTable({ proveedores, onEdit, onToggleEstado }: ProveedoresTableProps) {
+export function ProveedoresTable({
+  proveedores,
+  emptyMessage = 'No hay proveedores.',
+  onEdit,
+  onToggleEstado,
+}: ProveedoresTableProps) {
   const [pending, setPending] = useState<Proveedor | null>(null)
 
   if (proveedores.length === 0) {
-    return <EmptyState message="No hay proveedores." />
+    return <EmptyState message={emptyMessage} bordered={false} />
   }
 
   return (

@@ -1,6 +1,7 @@
 import { api } from '@/services/api'
 import type { Categoria } from '@/services/categoriaService'
 import type { PaginatedResponse } from '@/services/pagination'
+import type { Subcategoria } from '@/services/subcategoriaService'
 
 export interface Producto {
   id: number
@@ -11,13 +12,16 @@ export interface Producto {
   activo: boolean
   categoria_id: number | null
   categoria: Categoria | null
+  subcategoria_id: number | null
+  subcategoria: Subcategoria | null
 }
 
 export interface ProductoPayload {
   nombre: string
-  sku: string
+  sku: string | null
   precio_venta: number
   categoria_id: number | null
+  subcategoria_id: number | null
 }
 
 export interface ListProductosParams {

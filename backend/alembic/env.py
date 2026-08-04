@@ -20,6 +20,7 @@ from app.models.orden_reorden import OrdenReorden  # noqa: F401
 from app.models.producto import Producto  # noqa: F401
 from app.models.regla_reorden import ReglaReorden  # noqa: F401
 from app.models.proveedor import Proveedor  # noqa: F401
+from app.models.subcategoria import Subcategoria  # noqa: F401
 from app.models.usuario import Usuario  # noqa: F401
 from app.models.venta import Venta  # noqa: F401
 

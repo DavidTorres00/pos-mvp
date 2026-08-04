@@ -12,7 +12,7 @@ interface UsuariosTableProps {
 
 export function UsuariosTable({ usuarios, onTogglePermiso, pending }: UsuariosTableProps) {
   if (usuarios.length === 0) {
-    return <EmptyState message="No hay usuarios." />
+    return <EmptyState message="No hay usuarios." bordered={false} />
   }
 
   return (

@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.usuario import Usuario
+from app.models.usuario import RolUsuario, Usuario
 from app.repositories.pagination import paginar
 
 
@@ -14,8 +14,14 @@ def get_by_id(db: Session, usuario_id: int) -> Usuario | None:
 
 
 def get_all(db: Session, page: int, size: int) -> tuple[list[Usuario], int]:
-    stmt = select(Usuario).order_by(Usuario.nombre)
+    stmt = select(Usuario).where(Usuario.role == RolUsuario.CAJERO).order_by(Usuario.nombre)
     return paginar(db, stmt, page, size)
+
+
+def create(db: Session, usuario: Usuario) -> Usuario:
+    db.add(usuario)
+    db.flush()
+    return usuario
 
 
 def save(db: Session, usuario: Usuario) -> Usuario:

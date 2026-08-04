@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.categoria import Categoria
+from app.models.subcategoria import Subcategoria
 
 
 class Producto(Base):
@@ -21,3 +22,6 @@ class Producto(Base):
 
     categoria_id: Mapped[int | None] = mapped_column(ForeignKey("categorias.id"), nullable=True)
     categoria: Mapped[Categoria | None] = relationship(lazy="joined")
+
+    subcategoria_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"), nullable=True)
+    subcategoria: Mapped[Subcategoria | None] = relationship(lazy="joined")

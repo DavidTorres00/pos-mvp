@@ -1,5 +1,5 @@
 import { useApiMutation } from '@/lib/hooks/useApiMutation'
-import { setPermisoRetiroExcedente } from '@/services/usuarioService'
+import { createUsuario, setPermisoRetiroExcedente, type UsuarioCreatePayload } from '@/services/usuarioService'
 
 export function useSetPermisoRetiroExcedente() {
   return useApiMutation(
@@ -7,4 +7,8 @@ export function useSetPermisoRetiroExcedente() {
       setPermisoRetiroExcedente(id, puede_retirar_excedente),
     [['usuarios']],
   )
+}
+
+export function useCrearUsuario() {
+  return useApiMutation((payload: UsuarioCreatePayload) => createUsuario(payload), [['usuarios']])
 }

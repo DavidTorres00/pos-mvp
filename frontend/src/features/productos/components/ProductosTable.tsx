@@ -20,15 +20,22 @@ import type { Producto } from '@/services/productoService'
 interface ProductosTableProps {
   productos: Producto[]
   canManage: boolean
+  emptyMessage?: string
   onEdit: (producto: Producto) => void
   onToggleEstado: (producto: Producto) => void
 }
 
-export function ProductosTable({ productos, canManage, onEdit, onToggleEstado }: ProductosTableProps) {
+export function ProductosTable({
+  productos,
+  canManage,
+  emptyMessage = 'No hay productos.',
+  onEdit,
+  onToggleEstado,
+}: ProductosTableProps) {
   const [pending, setPending] = useState<Producto | null>(null)
 
   if (productos.length === 0) {
-    return <EmptyState message="No hay productos." />
+    return <EmptyState message={emptyMessage} bordered={false} />
   }
 
   return (
@@ -50,7 +57,11 @@ export function ProductosTable({ productos, canManage, onEdit, onToggleEstado }:
             <TableRow key={producto.id}>
               <TableCell>{producto.nombre}</TableCell>
               <TableCell>{producto.sku}</TableCell>
-              <TableCell>{producto.categoria?.nombre ?? '—'}</TableCell>
+              <TableCell>
+                {producto.subcategoria
+                  ? `${producto.subcategoria.categoria.nombre} > ${producto.subcategoria.nombre}`
+                  : producto.categoria?.nombre ?? '—'}
+              </TableCell>
               <TableCell className="font-semibold tabular-nums">{formatCurrency(producto.precio_venta)}</TableCell>
               <TableCell>{producto.stock}</TableCell>
               <TableCell>

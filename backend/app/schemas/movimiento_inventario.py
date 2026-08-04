@@ -21,5 +21,6 @@ class MovimientoOut(BaseModel):
     producto: ProductoOut
     tipo: TipoMovimiento
     cantidad: int
+    stock_resultante: int
     motivo: str | None
     created_at: datetime

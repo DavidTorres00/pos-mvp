@@ -9,9 +9,9 @@ from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import LoginRequest
 from app.schemas.pagination import Pagina
-from app.schemas.usuario import UsuarioOut, UsuarioPermisosUpdate
+from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPermisosUpdate
 from app.services import auth_service, usuario_service
-from app.services.usuario_service import UsuarioNoEncontradoError
+from app.services.usuario_service import EmailDuplicadoError, UsuarioNoEncontradoError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 usuarios_router = APIRouter(
@@ -67,6 +67,18 @@ def listar(
 ) -> Pagina[UsuarioOut]:
     items, total = usuario_service.listar(db, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
+
+
+@usuarios_router.post("", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
+def crear(
+    payload: UsuarioCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+) -> UsuarioOut:
+    try:
+        return usuario_service.crear(db, usuario.id, payload.email, payload.nombre, payload.password)
+    except EmailDuplicadoError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya está registrado")
 
 
 @usuarios_router.patch("/{usuario_id}/permisos", response_model=UsuarioOut)

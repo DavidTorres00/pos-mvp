@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
-from app.models.usuario import Usuario
+from app.core.security import hash_password
+from app.models.usuario import RolUsuario, Usuario
 from app.repositories import usuario_repository
 from app.services import auditoria_service
 
@@ -9,8 +10,27 @@ class UsuarioNoEncontradoError(Exception):
     pass
 
 
+class EmailDuplicadoError(Exception):
+    pass
+
+
 def listar(db: Session, page: int, size: int) -> tuple[list[Usuario], int]:
     return usuario_repository.get_all(db, page, size)
+
+
+def crear(db: Session, actor_id: int, email: str, nombre: str, password: str) -> Usuario:
+    if usuario_repository.get_by_email(db, email) is not None:
+        raise EmailDuplicadoError(email)
+    usuario = Usuario(
+        email=email,
+        nombre=nombre,
+        password_hash=hash_password(password),
+        role=RolUsuario.CAJERO,
+        activo=True,
+    )
+    usuario = usuario_repository.create(db, usuario)
+    auditoria_service.registrar(db, actor_id, "usuario_creado", "usuario", usuario.id, {"email": email})
+    return usuario
 
 
 def actualizar_permisos(db: Session, actor_id: int, usuario_id: int, puede_retirar_excedente: bool) -> Usuario:

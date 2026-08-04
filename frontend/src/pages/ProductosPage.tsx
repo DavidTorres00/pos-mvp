@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { ErrorState, LoadingState } from '@/components/DataStates'
-import { Pagination } from '@/components/Pagination'
+import { TableCard } from '@/components/TableCard'
 import { ProductoForm } from '@/features/productos/components/ProductoForm'
 import { ProductosTable } from '@/features/productos/components/ProductosTable'
 import { useCrearProducto, useSetEstadoProducto, useUpdateProducto } from '@/features/productos/hooks/useProductoMutations'
@@ -31,6 +30,7 @@ export function ProductosPage() {
   const create = useCrearProducto()
   const update = useUpdateProducto()
   const setEstado = useSetEstadoProducto()
+  const hayFiltrosActivos = search !== ''
 
   function handleCreate(values: ProductoFormValues) {
     create.mutate(values, { onSuccess: dialog.closeCreate })
@@ -42,16 +42,23 @@ export function ProductosPage() {
   }
 
   return (
-    <div className="flex max-w-4xl flex-col gap-4 p-6">
+    <div className="flex w-full flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold tracking-tight">Productos</h1>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <Input
-          placeholder="Buscar por nombre o SKU..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-          aria-label="Buscar productos"
-        />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-1 flex-wrap items-end gap-3">
+          <Input
+            placeholder="Buscar por nombre o SKU..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-sm"
+            aria-label="Buscar productos"
+          />
+          {hayFiltrosActivos && (
+            <Button variant="ghost" onClick={() => setSearch('')}>
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
         {isAdmin && (
           <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
             <DialogTrigger asChild>
@@ -73,21 +80,22 @@ export function ProductosPage() {
         )}
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : (
-        <>
-          <ProductosTable
-            productos={productos}
-            canManage={isAdmin}
-            onEdit={dialog.edit}
-            onToggleEstado={(producto) => setEstado.mutate({ id: producto.id, activo: !producto.activo })}
-          />
-          <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
-        </>
-      )}
+      <TableCard
+        isLoading={isLoading}
+        isError={isError}
+        page={page}
+        pageCount={pageCount}
+        total={total}
+        onPageChange={setPage}
+      >
+        <ProductosTable
+          productos={productos}
+          canManage={isAdmin}
+          emptyMessage={hayFiltrosActivos ? 'No hay productos que coincidan con tu búsqueda.' : 'No hay productos.'}
+          onEdit={dialog.edit}
+          onToggleEstado={(producto) => setEstado.mutate({ id: producto.id, activo: !producto.activo })}
+        />
+      </TableCard>
 
       <Dialog open={dialog.editing !== null} onOpenChange={(open) => !open && dialog.closeEdit()}>
         <DialogContent>
@@ -101,6 +109,7 @@ export function ProductosPage() {
                 sku: dialog.editing.sku,
                 precio_venta: Number(dialog.editing.precio_venta),
                 categoria_id: dialog.editing.categoria_id,
+                subcategoria_id: dialog.editing.subcategoria_id,
               }}
               isPending={update.isPending}
               errorMessage={

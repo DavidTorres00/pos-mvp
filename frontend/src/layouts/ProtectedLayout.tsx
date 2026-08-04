@@ -26,21 +26,57 @@ import { cn } from '@/lib/utils'
 import { useLogout } from '@/features/auth/hooks/useLogout'
 import { useAuthStore } from '@/stores/authStore'
 
-const NAV_LINKS = [
-  { to: '/', label: 'Dashboard', end: true, icon: LayoutDashboardIcon, adminOnly: false },
-  { to: '/productos', label: 'Productos', icon: PackageIcon, adminOnly: false },
-  { to: '/categorias', label: 'Categorías', icon: TagIcon, adminOnly: false },
-  { to: '/inventario', label: 'Inventario', icon: BoxesIcon, adminOnly: false },
-  { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false },
-  { to: '/compras', label: 'Compras', icon: ShoppingCartIcon, adminOnly: true },
-  { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, adminOnly: true },
-  { to: '/reglas-reorden', label: 'Reglas de reorden', icon: RepeatIcon, adminOnly: true },
-  { to: '/ordenes-reorden', label: 'Órdenes de reorden', icon: ClipboardCheckIcon, adminOnly: true },
-  { to: '/ventas', label: 'Ventas', icon: ReceiptIcon, adminOnly: false },
-  { to: '/reportes', label: 'Reportes', icon: BarChart3Icon, adminOnly: true },
-  { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon, adminOnly: true },
-  { to: '/usuarios', label: 'Usuarios', icon: UsersIcon, adminOnly: true },
-  { to: '/configuracion', label: 'Configuración', icon: SettingsIcon, adminOnly: true },
+interface NavItem {
+  to: string
+  label: string
+  icon: typeof LayoutDashboardIcon
+  adminOnly: boolean
+  end?: boolean
+}
+
+interface NavGroup {
+  label: string | null
+  links: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: null,
+    links: [{ to: '/', label: 'Dashboard', end: true, icon: LayoutDashboardIcon, adminOnly: false }],
+  },
+  {
+    label: 'Catálogo',
+    links: [
+      { to: '/productos', label: 'Productos', icon: PackageIcon, adminOnly: false },
+      { to: '/categorias', label: 'Categorías', icon: TagIcon, adminOnly: true },
+      { to: '/inventario', label: 'Inventario', icon: BoxesIcon, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Operación',
+    links: [
+      { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false },
+      { to: '/ventas', label: 'Ventas', icon: ReceiptIcon, adminOnly: false },
+    ],
+  },
+  {
+    label: 'Compras',
+    links: [
+      { to: '/compras', label: 'Compras', icon: ShoppingCartIcon, adminOnly: true },
+      { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, adminOnly: true },
+      { to: '/reglas-reorden', label: 'Reglas de reorden', icon: RepeatIcon, adminOnly: true },
+      { to: '/ordenes-reorden', label: 'Órdenes de reorden', icon: ClipboardCheckIcon, adminOnly: true },
+    ],
+  },
+  {
+    label: 'Administración',
+    links: [
+      { to: '/reportes', label: 'Reportes', icon: BarChart3Icon, adminOnly: true },
+      { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon, adminOnly: true },
+      { to: '/usuarios', label: 'Usuarios', icon: UsersIcon, adminOnly: true },
+      { to: '/configuracion', label: 'Configuración', icon: SettingsIcon, adminOnly: true },
+    ],
+  },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -62,7 +98,10 @@ export function ProtectedLayout() {
   }
 
   const isAdmin = usuario?.role === 'admin'
-  const navLinks = NAV_LINKS.filter((link) => !link.adminOnly || isAdmin)
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    links: group.links.filter((link) => !link.adminOnly || isAdmin),
+  })).filter((group) => group.links.length > 0)
 
   return (
     <div className="flex min-h-svh">
@@ -73,11 +112,20 @@ export function ProtectedLayout() {
         </div>
 
         <nav aria-label="Principal" className="flex flex-1 flex-col gap-0.5 px-2">
-          {navLinks.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass}>
-              <link.icon className="size-4 shrink-0" />
-              {link.label}
-            </NavLink>
+          {navGroups.map((group) => (
+            <div key={group.label ?? 'root'} className="flex flex-col gap-0.5 py-1">
+              {group.label && (
+                <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-sidebar-foreground/40 uppercase">
+                  {group.label}
+                </p>
+              )}
+              {group.links.map((link) => (
+                <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass}>
+                  <link.icon className="size-4 shrink-0" />
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -118,22 +166,33 @@ export function ProtectedLayout() {
               aria-label="Principal (móvil)"
               className="flex animate-in flex-col gap-0.5 border-t px-2 py-2 fade-in-0 slide-in-from-top-2 duration-150"
             >
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )
-                  }
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <link.icon className="size-4 shrink-0" />
-                  {link.label}
-                </NavLink>
+              {navGroups.map((group) => (
+                <div key={group.label ?? 'root'} className="flex flex-col gap-0.5 py-1">
+                  {group.label && (
+                    <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground/70 uppercase">
+                      {group.label}
+                    </p>
+                  )}
+                  {group.links.map((link) => (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      end={link.end}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )
+                      }
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <link.icon className="size-4 shrink-0" />
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </nav>
           )}
