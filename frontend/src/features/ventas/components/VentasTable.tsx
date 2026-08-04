@@ -1,8 +1,15 @@
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
 import { formatCurrency, formatDateTime } from '@/lib/format'
-import type { Venta } from '@/services/ventaService'
+import type { FormaPago, Venta } from '@/services/ventaService'
+
+const FORMA_PAGO_LABELS: Record<FormaPago, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+}
 
 interface VentasTableProps {
   ventas: Venta[]
@@ -20,6 +27,7 @@ export function VentasTable({ ventas, onVerDetalle }: VentasTableProps) {
         <TableRow>
           <TableHead>Fecha</TableHead>
           <TableHead>Total</TableHead>
+          <TableHead>Forma de pago</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -28,6 +36,11 @@ export function VentasTable({ ventas, onVerDetalle }: VentasTableProps) {
           <TableRow key={venta.id}>
             <TableCell>{formatDateTime(venta.created_at)}</TableCell>
             <TableCell className="font-semibold tabular-nums">{formatCurrency(venta.total)}</TableCell>
+            <TableCell>
+              <Badge variant={venta.forma_pago === 'efectivo' ? 'default' : 'secondary'}>
+                {FORMA_PAGO_LABELS[venta.forma_pago]}
+              </Badge>
+            </TableCell>
             <TableCell>
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(venta)}>
                 Ver detalle

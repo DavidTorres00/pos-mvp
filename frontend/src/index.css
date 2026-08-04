@@ -96,3 +96,19 @@
     @apply font-sans;
     }
 }
+
+/* Aísla el voucher imprimible (retiro de excedente de caja): oculta el resto de la app
+   al imprimir sin depender de dónde el portal del Dialog lo monte en el DOM. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #voucher-print,
+  #voucher-print * {
+    visibility: visible;
+  }
+  #voucher-print {
+    position: fixed;
+    inset: 0;
+  }
+}

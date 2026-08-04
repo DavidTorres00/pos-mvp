@@ -8,7 +8,7 @@ from app.models.usuario import RolUsuario, Usuario
 from app.schemas.compra import CompraCreate, CompraOut
 from app.schemas.pagination import Pagina
 from app.services import compra_service
-from app.services.compra_service import CompraNoEncontradaError, ProductoInvalidoError
+from app.services.compra_service import CompraNoEncontradaError, ProductoInvalidoError, ProveedorInvalidoError
 
 router = APIRouter(prefix="/compras", tags=["compras"], dependencies=[Depends(require_role(RolUsuario.ADMIN))])
 
@@ -26,9 +26,11 @@ def crear(
     payload: CompraCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
 ) -> CompraOut:
     try:
-        return compra_service.crear(db, usuario.id, payload.proveedor, payload.items)
+        return compra_service.crear(db, usuario.id, payload.proveedor_id, payload.items)
     except ProductoInvalidoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uno de los productos no existe")
+    except ProveedorInvalidoError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El proveedor no existe")
 
 
 @router.get("/{compra_id}", response_model=CompraOut)

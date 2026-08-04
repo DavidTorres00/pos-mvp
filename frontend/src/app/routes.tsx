@@ -5,13 +5,19 @@ import { ProtectedLayout } from '@/layouts/ProtectedLayout'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import {
+  AuditoriaPage,
   CajaPage,
   CategoriasPage,
   ComprasPage,
+  ConfiguracionPage,
   DashboardPage,
   InventarioPage,
+  OrdenesReordenPage,
   ProductosPage,
+  ProveedoresPage,
+  ReglasReordenPage,
   ReportesPage,
+  UsuariosPage,
   VentasPage,
 } from '@/app/lazyPages'
 
@@ -28,8 +34,14 @@ export const router = createBrowserRouter([
       { path: 'inventario', element: <InventarioPage /> },
       { path: 'caja', element: <CajaPage /> },
       { path: 'compras', element: <ComprasPage /> },
+      { path: 'proveedores', element: <ProveedoresPage /> },
+      { path: 'reglas-reorden', element: <ReglasReordenPage /> },
+      { path: 'ordenes-reorden', element: <OrdenesReordenPage /> },
       { path: 'ventas', element: <VentasPage /> },
       { path: 'reportes', element: <ReportesPage /> },
+      { path: 'auditoria', element: <AuditoriaPage /> },
+      { path: 'usuarios', element: <UsuariosPage /> },
+      { path: 'configuracion', element: <ConfiguracionPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

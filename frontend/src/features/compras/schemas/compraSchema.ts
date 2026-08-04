@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const compraSchema = z
   .object({
-    proveedor: z.string().min(1, 'El proveedor es requerido'),
+    proveedor_id: z.number().nullable(),
     items: z
       .array(
         z.object({
@@ -14,6 +14,9 @@ export const compraSchema = z
       .min(1, 'Agrega al menos un producto'),
   })
   .superRefine((values, ctx) => {
+    if (values.proveedor_id === null) {
+      ctx.addIssue({ code: 'custom', message: 'Selecciona un proveedor', path: ['proveedor_id'] })
+    }
     values.items.forEach((item, index) => {
       if (item.producto_id === null) {
         ctx.addIssue({

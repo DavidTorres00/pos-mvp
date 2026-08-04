@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import type { Producto } from '@/services/productoService'
+import type { Proveedor } from '@/services/proveedorService'
 import type { PaginatedResponse } from '@/services/pagination'
 
 export interface DetalleCompra {
@@ -13,7 +14,8 @@ export interface DetalleCompra {
 
 export interface Compra {
   id: number
-  proveedor: string
+  proveedor_id: number
+  proveedor: Proveedor
   total: string
   usuario_id: number
   created_at: string
@@ -27,7 +29,7 @@ export interface CompraItemPayload {
 }
 
 export interface CompraPayload {
-  proveedor: string
+  proveedor_id: number
   items: CompraItemPayload[]
 }
 

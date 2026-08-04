@@ -1,5 +1,5 @@
 import { useApiMutation } from '@/lib/hooks/useApiMutation'
-import { abrirCaja, cerrarCaja, crearMovimientoCaja } from '@/services/cajaService'
+import { abrirCaja, cerrarCaja, crearMovimientoCaja, retirarExcedenteCaja } from '@/services/cajaService'
 import type { MovimientoCajaPayload } from '@/services/cajaService'
 
 export function useAbrirCaja() {
@@ -14,5 +14,12 @@ export function useCrearMovimientoCaja() {
   return useApiMutation(
     (payload: MovimientoCajaPayload) => crearMovimientoCaja(payload),
     [['caja-actual'], ['caja-movimientos'], ['caja-resumen'], ['reporte-caja']],
+  )
+}
+
+export function useRetirarExcedenteCaja() {
+  return useApiMutation(
+    () => retirarExcedenteCaja(),
+    [['caja-actual'], ['caja-movimientos'], ['caja-resumen'], ['reporte-caja'], ['auditoria']],
   )
 }

@@ -28,7 +28,7 @@ export function ComprasTable({ compras, onVerDetalle }: ComprasTableProps) {
         {compras.map((compra) => (
           <TableRow key={compra.id}>
             <TableCell>{formatDateTime(compra.created_at)}</TableCell>
-            <TableCell>{compra.proveedor}</TableCell>
+            <TableCell>{compra.proveedor.nombre}</TableCell>
             <TableCell className="font-semibold tabular-nums">{formatCurrency(compra.total)}</TableCell>
             <TableCell>
               <Button variant="outline" size="sm" onClick={() => onVerDetalle(compra)}>

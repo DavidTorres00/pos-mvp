@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.producto import Producto
 from app.repositories import categoria_repository, producto_repository
+from app.services import auditoria_service
 
 
 class SkuDuplicadoError(Exception):
@@ -35,20 +36,32 @@ def obtener(db: Session, producto_id: int) -> Producto:
     return producto
 
 
-def crear(db: Session, nombre: str, sku: str, precio_venta: Decimal, categoria_id: int | None = None) -> Producto:
+def crear(
+    db: Session, usuario_id: int, nombre: str, sku: str, precio_venta: Decimal, categoria_id: int | None = None
+) -> Producto:
     if producto_repository.get_by_sku(db, sku) is not None:
         raise SkuDuplicadoError(sku)
     _validar_categoria(db, categoria_id)
     producto = Producto(nombre=nombre, sku=sku, precio_venta=precio_venta, categoria_id=categoria_id)
     try:
         with db.begin_nested():
-            return producto_repository.create(db, producto)
+            producto = producto_repository.create(db, producto)
     except IntegrityError:
         raise SkuDuplicadoError(sku)
+    auditoria_service.registrar(
+        db, usuario_id, "producto_creado", "producto", producto.id, {"sku": sku, "precio_venta": str(precio_venta)}
+    )
+    return producto
 
 
 def actualizar(
-    db: Session, producto_id: int, nombre: str, sku: str, precio_venta: Decimal, categoria_id: int | None = None
+    db: Session,
+    usuario_id: int,
+    producto_id: int,
+    nombre: str,
+    sku: str,
+    precio_venta: Decimal,
+    categoria_id: int | None = None,
 ) -> Producto:
     producto = producto_repository.get_by_id(db, producto_id)
     if producto is None:
@@ -59,20 +72,42 @@ def actualizar(
         raise SkuDuplicadoError(sku)
     _validar_categoria(db, categoria_id)
 
+    precio_anterior = producto.precio_venta
     producto.nombre = nombre
     producto.sku = sku
     producto.precio_venta = precio_venta
     producto.categoria_id = categoria_id
     try:
         with db.begin_nested():
-            return producto_repository.save(db, producto)
+            producto = producto_repository.save(db, producto)
     except IntegrityError:
         raise SkuDuplicadoError(sku)
+    if precio_anterior != precio_venta:
+        auditoria_service.registrar(
+            db,
+            usuario_id,
+            "producto_precio_cambiado",
+            "producto",
+            producto.id,
+            {"precio_anterior": str(precio_anterior), "precio_nuevo": str(precio_venta)},
+        )
+    return producto
 
 
-def cambiar_estado(db: Session, producto_id: int, activo: bool) -> Producto:
+def cambiar_estado(db: Session, usuario_id: int, producto_id: int, activo: bool) -> Producto:
     producto = producto_repository.get_by_id(db, producto_id)
     if producto is None:
         raise ProductoNoEncontradoError(producto_id)
+    activo_anterior = producto.activo
     producto.activo = activo
-    return producto_repository.save(db, producto)
+    producto = producto_repository.save(db, producto)
+    if activo_anterior != activo:
+        auditoria_service.registrar(
+            db,
+            usuario_id,
+            "producto_estado_cambiado",
+            "producto",
+            producto.id,
+            {"activo_anterior": activo_anterior, "activo_nuevo": activo},
+        )
+    return producto

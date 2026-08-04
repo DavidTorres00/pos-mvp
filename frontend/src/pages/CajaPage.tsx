@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AlertTriangleIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -8,16 +9,27 @@ import { AperturaCajaForm } from '@/features/caja/components/AperturaCajaForm'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
 import { MovimientoCajaForm } from '@/features/caja/components/MovimientoCajaForm'
 import { MovimientosCajaTable } from '@/features/caja/components/MovimientosCajaTable'
+import { VoucherRetiroDialog } from '@/features/caja/components/VoucherRetiroDialog'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
-import { useAbrirCaja, useCerrarCaja, useCrearMovimientoCaja } from '@/features/caja/hooks/useCajaMutations'
+import {
+  useAbrirCaja,
+  useCerrarCaja,
+  useCrearMovimientoCaja,
+  useRetirarExcedenteCaja,
+} from '@/features/caja/hooks/useCajaMutations'
 import { useCajaMovimientos, useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
 import type { AperturaFormValues, CierreFormValues, MovimientoCajaFormValues } from '@/features/caja/schemas/cajaSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
+import type { VoucherRetiro } from '@/services/cajaService'
+import { useAuthStore } from '@/stores/authStore'
 
 export function CajaPage() {
-  const { data: caja, isLoading, isError } = useCajaActual()
+  const usuario = useAuthStore((state) => state.usuario)
+  const puedeRetirarExcedente = usuario?.role === 'admin' || usuario?.puede_retirar_excedente === true
+  const { data: cajaActual, isLoading, isError } = useCajaActual()
+  const caja = cajaActual?.caja
   const { data: resumen, isError: isErrorResumen } = useCajaResumen(caja?.id)
   const { page, size, setPage } = usePagination(10)
   const { data: movimientosData, isError: isErrorMovimientos } = useCajaMovimientos(caja?.id, page, size)
@@ -27,8 +39,10 @@ export function CajaPage() {
   const abrir = useAbrirCaja()
   const cerrar = useCerrarCaja()
   const crearMovimiento = useCrearMovimientoCaja()
+  const retirarExcedente = useRetirarExcedenteCaja()
   const [movimientoOpen, setMovimientoOpen] = useState(false)
   const [cierreOpen, setCierreOpen] = useState(false)
+  const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
 
   if (isLoading) {
     return <LoadingState />
@@ -107,6 +121,32 @@ export function CajaPage() {
         </div>
       </div>
 
+      {cajaActual?.excede_limite && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+          <div className="flex items-center gap-2">
+            <AlertTriangleIcon className="size-5 shrink-0 text-destructive" />
+            <p>
+              El efectivo en caja ({formatCurrency(cajaActual.efectivo_actual ?? '0')}) superó el límite configurado (
+              {formatCurrency(cajaActual.limite_efectivo ?? '0')}).
+            </p>
+          </div>
+          {puedeRetirarExcedente ? (
+            <Button
+              size="sm"
+              disabled={retirarExcedente.isPending}
+              onClick={() => retirarExcedente.mutate(undefined, { onSuccess: (data) => setVoucher(data) })}
+            >
+              Retirar excedente
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">Pedile a un admin que retire el excedente.</span>
+          )}
+        </div>
+      )}
+      {retirarExcedente.isError && (
+        <ErrorState message={getApiErrorMessage(retirarExcedente.error, 'No se pudo retirar el excedente')} />
+      )}
+
       {isErrorResumen ? (
         <ErrorState message="No se pudo cargar el resumen de caja." />
       ) : (
@@ -116,6 +156,22 @@ export function CajaPage() {
               <span className="text-muted-foreground">Monto inicial</span>{' '}
               {formatCurrency(resumen.caja.monto_inicial)}
             </p>
+            <p className="flex justify-between tabular-nums">
+              <span className="text-muted-foreground">Ventas en efectivo</span>{' '}
+              {formatCurrency(resumen.total_ventas_efectivo)}
+            </p>
+            {Number(resumen.total_ventas_tarjeta) > 0 && (
+              <p className="flex justify-between tabular-nums text-muted-foreground">
+                <span>Ventas con tarjeta (no cuenta como efectivo)</span>
+                {formatCurrency(resumen.total_ventas_tarjeta)}
+              </p>
+            )}
+            {Number(resumen.total_ventas_transferencia) > 0 && (
+              <p className="flex justify-between tabular-nums text-muted-foreground">
+                <span>Ventas por transferencia (no cuenta como efectivo)</span>
+                {formatCurrency(resumen.total_ventas_transferencia)}
+              </p>
+            )}
             <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">
               <span className="font-medium text-foreground">Monto esperado ahora</span>{' '}
               {formatCurrency(resumen.monto_esperado)}
@@ -132,6 +188,8 @@ export function CajaPage() {
           <Pagination page={page} pageCount={pageCount} total={total} onPageChange={setPage} />
         </>
       )}
+
+      <VoucherRetiroDialog voucher={voucher} onClose={() => setVoucher(null)} />
     </div>
   )
 }

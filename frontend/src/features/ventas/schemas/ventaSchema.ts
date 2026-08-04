@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const ventaSchema = z
   .object({
+    forma_pago: z.enum(['efectivo', 'tarjeta', 'transferencia']),
     items: z
       .array(
         z.object({

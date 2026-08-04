@@ -16,15 +16,36 @@ export interface Caja {
 export interface MovimientoCaja {
   id: number
   caja_id: number
+  usuario_id: number
   tipo: TipoMovimientoCaja
   monto: string
   motivo: string | null
   created_at: string
 }
 
+export interface CajaActual {
+  caja: Caja | null
+  efectivo_actual: string | null
+  limite_efectivo: string | null
+  excede_limite: boolean
+}
+
+export interface VoucherRetiro {
+  movimiento_id: number
+  caja_id: number
+  cajero: string
+  fecha: string
+  monto_retirado: string
+  efectivo_anterior: string
+  efectivo_resultante: string
+  monto_inicial: string
+}
+
 export interface CajaResumen {
   caja: Caja
   total_ventas_efectivo: string
+  total_ventas_tarjeta: string
+  total_ventas_transferencia: string
   total_entradas: string
   total_salidas: string
   monto_esperado: string
@@ -37,8 +58,13 @@ export interface MovimientoCajaPayload {
   motivo: string | null
 }
 
-export async function getCajaActual(): Promise<Caja | null> {
-  const { data } = await api.get<Caja | null>('/caja/actual')
+export async function getCajaActual(): Promise<CajaActual> {
+  const { data } = await api.get<CajaActual>('/caja/actual')
+  return data
+}
+
+export async function retirarExcedenteCaja(): Promise<VoucherRetiro> {
+  const { data } = await api.post<VoucherRetiro>('/caja/retirar-excedente')
   return data
 }
 

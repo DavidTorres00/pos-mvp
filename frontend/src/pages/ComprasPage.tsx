@@ -30,7 +30,7 @@ export function ComprasPage() {
   function handleCreate(values: CompraFormValues) {
     if (crear.isPending) return
     const payload = {
-      proveedor: values.proveedor,
+      proveedor_id: values.proveedor_id as number,
       items: values.items.map((item) => ({ ...item, producto_id: item.producto_id as number })),
     }
     crear.mutate(payload, { onSuccess: () => setCreateOpen(false) })
@@ -86,7 +86,7 @@ export function ComprasPage() {
           </DialogHeader>
           {detalle && (
             <div className="flex flex-col gap-2 text-sm">
-              <p>Proveedor: {detalle.proveedor}</p>
+              <p>Proveedor: {detalle.proveedor.nombre}</p>
               <p>Fecha: {formatDateTime(detalle.created_at)}</p>
               <ul className="flex flex-col gap-1">
                 {detalle.items.map((item) => (

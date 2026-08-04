@@ -11,3 +11,8 @@ class UsuarioOut(BaseModel):
     nombre: str
     role: RolUsuario
     activo: bool
+    puede_retirar_excedente: bool
+
+
+class UsuarioPermisosUpdate(BaseModel):
+    puede_retirar_excedente: bool

@@ -11,11 +11,14 @@ export interface DetalleVenta {
   subtotal: string
 }
 
+export type FormaPago = 'efectivo' | 'tarjeta' | 'transferencia'
+
 export interface Venta {
   id: number
   caja_id: number
   usuario_id: number
   total: string
+  forma_pago: FormaPago
   created_at: string
   items: DetalleVenta[]
 }
@@ -27,6 +30,7 @@ export interface VentaItemPayload {
 
 export interface VentaPayload {
   items: VentaItemPayload[]
+  forma_pago: FormaPago
 }
 
 export interface ListVentasParams {

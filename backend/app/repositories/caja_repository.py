@@ -10,6 +10,11 @@ def get_abierta(db: Session) -> CajaSesion | None:
     return db.scalar(select(CajaSesion).where(CajaSesion.abierta.is_(True)))
 
 
+def get_abierta_for_update(db: Session) -> CajaSesion | None:
+    stmt = select(CajaSesion).where(CajaSesion.abierta.is_(True)).with_for_update(of=CajaSesion)
+    return db.scalar(stmt)
+
+
 def get_ultima_cerrada(db: Session) -> CajaSesion | None:
     stmt = select(CajaSesion).where(CajaSesion.abierta.is_(False)).order_by(CajaSesion.fecha_cierre.desc()).limit(1)
     return db.scalar(stmt)

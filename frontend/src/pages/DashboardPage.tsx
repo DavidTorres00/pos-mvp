@@ -37,7 +37,8 @@ export function DashboardPage() {
     queryFn: () => getVentasDia(),
     enabled: isAdmin,
   })
-  const { data: caja, isLoading: isLoadingCaja } = useCajaActual()
+  const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual()
+  const caja = cajaActual?.caja
   const { data: resumen } = useCajaResumen(caja?.id)
 
   const ticketPromedio =

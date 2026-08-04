@@ -2,14 +2,20 @@ import { Suspense, useState } from 'react'
 import {
   BarChart3Icon,
   BoxesIcon,
+  ClipboardCheckIcon,
+  ClipboardListIcon,
   LayoutDashboardIcon,
   MenuIcon,
   PackageIcon,
   PiggyBankIcon,
   ReceiptIcon,
+  RepeatIcon,
+  SettingsIcon,
   ShoppingCartIcon,
   StoreIcon,
   TagIcon,
+  TruckIcon,
+  UsersIcon,
   XIcon,
 } from 'lucide-react'
 import { Navigate, NavLink, Outlet } from 'react-router-dom'
@@ -27,8 +33,14 @@ const NAV_LINKS = [
   { to: '/inventario', label: 'Inventario', icon: BoxesIcon, adminOnly: false },
   { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false },
   { to: '/compras', label: 'Compras', icon: ShoppingCartIcon, adminOnly: true },
+  { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, adminOnly: true },
+  { to: '/reglas-reorden', label: 'Reglas de reorden', icon: RepeatIcon, adminOnly: true },
+  { to: '/ordenes-reorden', label: 'Órdenes de reorden', icon: ClipboardCheckIcon, adminOnly: true },
   { to: '/ventas', label: 'Ventas', icon: ReceiptIcon, adminOnly: false },
   { to: '/reportes', label: 'Reportes', icon: BarChart3Icon, adminOnly: true },
+  { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon, adminOnly: true },
+  { to: '/usuarios', label: 'Usuarios', icon: UsersIcon, adminOnly: true },
+  { to: '/configuracion', label: 'Configuración', icon: SettingsIcon, adminOnly: true },
 ]
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>

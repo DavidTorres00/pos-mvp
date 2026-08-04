@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.movimiento_inventario import MovimientoInventario, TipoMovimiento
 from app.repositories import movimiento_inventario_repository, producto_repository
+from app.services import reorden_service
 
 
 class ProductoNoEncontradoError(Exception):
@@ -33,4 +34,9 @@ def registrar_movimiento(
     movimiento = MovimientoInventario(
         producto_id=producto_id, tipo=tipo, cantidad=cantidad, motivo=motivo, usuario_id=usuario_id
     )
-    return movimiento_inventario_repository.create(db, movimiento)
+    movimiento = movimiento_inventario_repository.create(db, movimiento)
+
+    if tipo == TipoMovimiento.SALIDA:
+        reorden_service.disparar_si_corresponde(db, producto_id)
+
+    return movimiento

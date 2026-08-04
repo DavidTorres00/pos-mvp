@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.models.detalle_venta import DetalleVenta
 from app.models.movimiento_inventario import TipoMovimiento
-from app.models.venta import Venta
+from app.models.venta import FormaPago, Venta
 from app.repositories import producto_repository, venta_repository
 from app.schemas.venta import VentaItemCreate
-from app.services import caja_service, inventario_service
+from app.services import auditoria_service, caja_service, inventario_service
 
 
 class ProductoInvalidoError(Exception):
@@ -38,7 +38,7 @@ def obtener(db: Session, venta_id: int) -> Venta:
     return venta
 
 
-def crear(db: Session, usuario_id: int, items: list[VentaItemCreate]) -> Venta:
+def crear(db: Session, usuario_id: int, items: list[VentaItemCreate], forma_pago: FormaPago) -> Venta:
     caja = caja_service.obtener_abierta(db)
     if caja is None:
         raise CajaNoAbiertaError()
@@ -59,7 +59,7 @@ def crear(db: Session, usuario_id: int, items: list[VentaItemCreate]) -> Venta:
     total = sum(
         (item.cantidad * productos[item.producto_id].precio_venta for item in items), Decimal("0")
     )
-    venta = Venta(caja_id=caja.id, usuario_id=usuario_id, total=total)
+    venta = Venta(caja_id=caja.id, usuario_id=usuario_id, total=total, forma_pago=forma_pago)
     venta.items = [
         DetalleVenta(
             producto_id=item.producto_id,
@@ -76,4 +76,7 @@ def crear(db: Session, usuario_id: int, items: list[VentaItemCreate]) -> Venta:
             db, usuario_id, item.producto_id, TipoMovimiento.SALIDA, item.cantidad, motivo=f"Venta #{venta.id}"
         )
 
+    auditoria_service.registrar(
+        db, usuario_id, "venta_registrada", "venta", venta.id, {"total": str(total), "forma_pago": forma_pago.value}
+    )
     return venta

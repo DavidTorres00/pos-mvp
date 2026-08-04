@@ -7,6 +7,7 @@ export interface Usuario {
   nombre: string
   activo: boolean
   role: 'admin' | 'cajero'
+  puede_retirar_excedente: boolean
 }
 
 interface AuthState {

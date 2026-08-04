@@ -7,22 +7,30 @@ from app.database.session import get_db
 from app.models.usuario import Usuario
 from app.schemas.caja import (
     CajaAbrirRequest,
+    CajaActualOut,
     CajaCerrarRequest,
     CajaOut,
     CajaResumenOut,
     MovimientoCajaCreate,
     MovimientoCajaOut,
+    VoucherRetiroOut,
 )
 from app.schemas.pagination import Pagina
 from app.services import caja_service
-from app.services.caja_service import CajaNoAbiertaError, CajaNoEncontradaError, CajaYaAbiertaError
+from app.services.caja_service import (
+    CajaNoAbiertaError,
+    CajaNoEncontradaError,
+    CajaYaAbiertaError,
+    PermisoRetiroExcedenteError,
+    SinExcedenteError,
+)
 
 router = APIRouter(prefix="/caja", tags=["caja"], dependencies=[Depends(get_current_user)])
 
 
-@router.get("/actual", response_model=CajaOut | None)
-def actual(db: Session = Depends(get_db)) -> CajaOut | None:
-    return caja_service.obtener_abierta(db)
+@router.get("/actual", response_model=CajaActualOut)
+def actual(db: Session = Depends(get_db)) -> CajaActualOut:
+    return caja_service.obtener_actual(db)
 
 
 @router.post("/abrir", response_model=CajaOut, status_code=status.HTTP_201_CREATED)
@@ -36,17 +44,21 @@ def abrir(
 
 
 @router.post("/cerrar", response_model=CajaResumenOut)
-def cerrar(payload: CajaCerrarRequest, db: Session = Depends(get_db)) -> CajaResumenOut:
+def cerrar(
+    payload: CajaCerrarRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> CajaResumenOut:
     try:
-        return caja_service.cerrar(db, payload.monto_final)
+        return caja_service.cerrar(db, usuario.id, payload.monto_final)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
 
 
 @router.post("/movimientos", response_model=MovimientoCajaOut, status_code=status.HTTP_201_CREATED)
-def crear_movimiento(payload: MovimientoCajaCreate, db: Session = Depends(get_db)) -> MovimientoCajaOut:
+def crear_movimiento(
+    payload: MovimientoCajaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> MovimientoCajaOut:
     try:
-        return caja_service.registrar_movimiento(db, payload.tipo, payload.monto, payload.motivo)
+        return caja_service.registrar_movimiento(db, usuario.id, payload.tipo, payload.monto, payload.motivo)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
 
@@ -59,6 +71,20 @@ def listar_movimientos(
 ) -> Pagina[MovimientoCajaOut]:
     items, total = caja_service.listar_movimientos(db, caja_id, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
+
+
+@router.post("/retirar-excedente", response_model=VoucherRetiroOut, status_code=status.HTTP_201_CREATED)
+def retirar_excedente(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> VoucherRetiroOut:
+    try:
+        return caja_service.retirar_excedente(db, usuario)
+    except PermisoRetiroExcedenteError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="No tenés permiso para retirar el excedente de caja"
+        )
+    except CajaNoAbiertaError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
+    except SinExcedenteError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay excedente que retirar")
 
 
 @router.get("/{caja_id}/resumen", response_model=CajaResumenOut)

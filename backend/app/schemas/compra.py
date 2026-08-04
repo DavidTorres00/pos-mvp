@@ -4,6 +4,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.producto import ProductoOut
+from app.schemas.proveedor import ProveedorOut
 
 
 class CompraItemCreate(BaseModel):
@@ -13,7 +14,7 @@ class CompraItemCreate(BaseModel):
 
 
 class CompraCreate(BaseModel):
-    proveedor: str
+    proveedor_id: int
     items: list[CompraItemCreate] = Field(min_length=1)
 
 
@@ -32,7 +33,8 @@ class CompraOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    proveedor: str
+    proveedor_id: int
+    proveedor: ProveedorOut
     total: Decimal
     usuario_id: int
     created_at: datetime

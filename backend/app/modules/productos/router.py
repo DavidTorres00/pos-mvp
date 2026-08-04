@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_role
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
-from app.models.usuario import RolUsuario
+from app.models.usuario import RolUsuario, Usuario
 from app.schemas.pagination import Pagina
 from app.schemas.producto import ProductoCreate, ProductoEstado, ProductoOut, ProductoUpdate
 from app.services import producto_service
@@ -25,9 +25,11 @@ def listar(
 
 
 @router.post("", response_model=ProductoOut, status_code=status.HTTP_201_CREATED, dependencies=[solo_admin])
-def crear(payload: ProductoCreate, db: Session = Depends(get_db)) -> ProductoOut:
+def crear(payload: ProductoCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> ProductoOut:
     try:
-        return producto_service.crear(db, payload.nombre, payload.sku, payload.precio_venta, payload.categoria_id)
+        return producto_service.crear(
+            db, usuario.id, payload.nombre, payload.sku, payload.precio_venta, payload.categoria_id
+        )
     except SkuDuplicadoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El SKU ya está en uso")
     except CategoriaInvalidaError:
@@ -43,10 +45,12 @@ def obtener(producto_id: int, db: Session = Depends(get_db)) -> ProductoOut:
 
 
 @router.put("/{producto_id}", response_model=ProductoOut, dependencies=[solo_admin])
-def actualizar(producto_id: int, payload: ProductoUpdate, db: Session = Depends(get_db)) -> ProductoOut:
+def actualizar(
+    producto_id: int, payload: ProductoUpdate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> ProductoOut:
     try:
         return producto_service.actualizar(
-            db, producto_id, payload.nombre, payload.sku, payload.precio_venta, payload.categoria_id
+            db, usuario.id, producto_id, payload.nombre, payload.sku, payload.precio_venta, payload.categoria_id
         )
     except SkuDuplicadoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El SKU ya está en uso")
@@ -57,8 +61,10 @@ def actualizar(producto_id: int, payload: ProductoUpdate, db: Session = Depends(
 
 
 @router.patch("/{producto_id}/estado", response_model=ProductoOut, dependencies=[solo_admin])
-def cambiar_estado(producto_id: int, payload: ProductoEstado, db: Session = Depends(get_db)) -> ProductoOut:
+def cambiar_estado(
+    producto_id: int, payload: ProductoEstado, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> ProductoOut:
     try:
-        return producto_service.cambiar_estado(db, producto_id, payload.activo)
+        return producto_service.cambiar_estado(db, usuario.id, producto_id, payload.activo)
     except ProductoNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")

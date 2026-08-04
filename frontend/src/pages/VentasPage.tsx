@@ -32,6 +32,7 @@ export function VentasPage() {
     if (crear.isPending) return
     const payload = {
       items: values.items.map((item) => ({ producto_id: item.producto_id as number, cantidad: item.cantidad })),
+      forma_pago: values.forma_pago,
     }
     crear.mutate(payload, { onSuccess: () => setCreateOpen(false) })
   }
@@ -90,6 +91,10 @@ export function VentasPage() {
           {detalle && (
             <div className="flex flex-col gap-2 text-sm">
               <p>Fecha: {formatDateTime(detalle.created_at)}</p>
+              <p>
+                Forma de pago:{' '}
+                {{ efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' }[detalle.forma_pago]}
+              </p>
               <ul className="flex flex-col gap-1">
                 {detalle.items.map((item) => (
                   <li key={item.id}>

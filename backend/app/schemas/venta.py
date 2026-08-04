@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.models.venta import FormaPago
 from app.schemas.producto import ProductoOut
 
 
@@ -13,6 +14,7 @@ class VentaItemCreate(BaseModel):
 
 class VentaCreate(BaseModel):
     items: list[VentaItemCreate] = Field(min_length=1)
+    forma_pago: FormaPago = FormaPago.EFECTIVO
 
 
 class DetalleVentaOut(BaseModel):
@@ -33,5 +35,6 @@ class VentaOut(BaseModel):
     caja_id: int
     usuario_id: int
     total: Decimal
+    forma_pago: FormaPago
     created_at: datetime
     items: list[DetalleVentaOut]

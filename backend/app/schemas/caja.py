@@ -25,6 +25,7 @@ class MovimientoCajaOut(BaseModel):
 
     id: int
     caja_id: int
+    usuario_id: int
     tipo: TipoMovimientoCaja
     monto: Decimal
     motivo: str | None
@@ -46,7 +47,27 @@ class CajaOut(BaseModel):
 class CajaResumenOut(BaseModel):
     caja: CajaOut
     total_ventas_efectivo: Decimal
+    total_ventas_tarjeta: Decimal
+    total_ventas_transferencia: Decimal
     total_entradas: Decimal
     total_salidas: Decimal
     monto_esperado: Decimal
     diferencia: Decimal | None
+
+
+class CajaActualOut(BaseModel):
+    caja: CajaOut | None
+    efectivo_actual: Decimal | None
+    limite_efectivo: Decimal | None
+    excede_limite: bool
+
+
+class VoucherRetiroOut(BaseModel):
+    movimiento_id: int
+    caja_id: int
+    cajero: str
+    fecha: datetime
+    monto_retirado: Decimal
+    efectivo_anterior: Decimal
+    efectivo_resultante: Decimal
+    monto_inicial: Decimal

@@ -24,7 +24,7 @@ export function VentaForm({ isPending, errorMessage, onSubmit }: VentaFormProps)
     formState: { errors },
   } = useForm<VentaFormValues>({
     resolver: zodResolver(ventaSchema),
-    defaultValues: { items: [{ producto_id: null, cantidad: 1 }] },
+    defaultValues: { forma_pago: 'efectivo', items: [{ producto_id: null, cantidad: 1 }] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   // Fetches the largest page the backend allows (size=100) since this dropdown needs the
@@ -47,6 +47,18 @@ export function VentaForm({ isPending, errorMessage, onSubmit }: VentaFormProps)
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+      <SelectField
+        control={control}
+        name="forma_pago"
+        label="Forma de pago"
+        options={[
+          { value: 'efectivo', label: 'Efectivo' },
+          { value: 'tarjeta', label: 'Tarjeta' },
+          { value: 'transferencia', label: 'Transferencia' },
+        ]}
+        error={errors.forma_pago}
+      />
+
       <div className="flex flex-col gap-3">
         <span className="text-sm leading-none font-medium">Productos</span>
         {fields.map((field, index) => {
