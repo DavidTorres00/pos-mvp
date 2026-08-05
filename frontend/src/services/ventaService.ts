@@ -13,6 +13,12 @@ export interface DetalleVenta {
 
 export type FormaPago = 'efectivo' | 'tarjeta' | 'transferencia'
 
+export const FORMA_PAGO_LABELS: Record<FormaPago, string> = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+}
+
 export interface Venta {
   id: number
   caja_id: number

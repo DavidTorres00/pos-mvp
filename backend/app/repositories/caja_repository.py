@@ -2,8 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.caja import CajaSesion
-from app.models.movimiento_caja import MovimientoCaja
+from app.models.movimiento_caja import MovimientoCaja, TipoMovimientoCaja
 from app.repositories.pagination import paginar
+
+# motivo fijo que pone caja_service.retirar_excedente — no hay columna dedicada para distinguir
+# "fue un retiro de excedente" de una salida manual cualquiera, y agregar una para esto sería
+# más migración de la que vale la pena por ahora
+MOTIVO_RETIRO_EXCEDENTE = "Retiro por excedente de efectivo"
 
 
 def get_abierta_by_usuario(db: Session, usuario_id: int) -> CajaSesion | None:
@@ -73,3 +78,17 @@ def crear_movimiento(db: Session, movimiento: MovimientoCaja) -> MovimientoCaja:
     db.add(movimiento)
     db.flush()
     return movimiento
+
+
+def get_ultimo_retiro_excedente(db: Session, caja_id: int) -> MovimientoCaja | None:
+    stmt = (
+        select(MovimientoCaja)
+        .where(
+            MovimientoCaja.caja_id == caja_id,
+            MovimientoCaja.tipo == TipoMovimientoCaja.SALIDA,
+            MovimientoCaja.motivo == MOTIVO_RETIRO_EXCEDENTE,
+        )
+        .order_by(MovimientoCaja.created_at.desc())
+        .limit(1)
+    )
+    return db.scalar(stmt)

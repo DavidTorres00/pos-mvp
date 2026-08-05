@@ -2,6 +2,7 @@ import { useApiMutation } from '@/lib/hooks/useApiMutation'
 import {
   cerrarCajaDeUsuario,
   createUsuario,
+  retirarExcedenteDeUsuario,
   setPermisoRetiroExcedente,
   type UsuarioCreatePayload,
 } from '@/services/usuarioService'
@@ -22,5 +23,12 @@ export function useCerrarCajaDeUsuario() {
   return useApiMutation(
     ({ id, monto_final }: { id: number; monto_final: number }) => cerrarCajaDeUsuario(id, monto_final),
     [['caja-de-usuario'], ['cajas-abiertas'], ['usuarios']],
+  )
+}
+
+export function useRetirarExcedenteDeUsuario() {
+  return useApiMutation(
+    (id: number) => retirarExcedenteDeUsuario(id),
+    [['caja-de-usuario'], ['caja-movimientos'], ['cajas-abiertas'], ['auditoria']],
   )
 }

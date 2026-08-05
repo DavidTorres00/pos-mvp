@@ -3,9 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+from app.models.usuario import Usuario
 
 
 class TipoMovimientoCaja(str, enum.Enum):
@@ -23,3 +24,9 @@ class MovimientoCaja(Base):
     monto: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     motivo: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+    @property
+    def usuario_nombre(self) -> str:
+        return self.usuario.nombre

@@ -3,13 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
 import { formatCurrency, formatDateTime } from '@/lib/format'
-import type { FormaPago, Venta } from '@/services/ventaService'
-
-const FORMA_PAGO_LABELS: Record<FormaPago, string> = {
-  efectivo: 'Efectivo',
-  tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
-}
+import { FORMA_PAGO_LABELS, type Venta } from '@/services/ventaService'
 
 interface VentasTableProps {
   ventas: Venta[]

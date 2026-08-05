@@ -6,7 +6,6 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import {
   AuditoriaPage,
-  CajaPage,
   CategoriasPage,
   ComprasPage,
   ConfiguracionPage,
@@ -33,7 +32,6 @@ export const router = createBrowserRouter([
       { path: 'productos', element: <ProductosPage /> },
       { path: 'categorias', element: <CategoriasPage /> },
       { path: 'inventario', element: <InventarioPage /> },
-      { path: 'caja', element: <CajaPage /> },
       { path: 'compras', element: <ComprasPage /> },
       { path: 'proveedores', element: <ProveedoresPage /> },
       { path: 'reglas-reorden', element: <ReglasReordenPage /> },

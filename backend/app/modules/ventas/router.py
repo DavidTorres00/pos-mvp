@@ -10,6 +10,7 @@ from app.schemas.venta import VentaCreate, VentaOut
 from app.services import venta_service
 from app.services.venta_service import (
     CajaNoAbiertaError,
+    LimiteEfectivoExcedidoError,
     ProductoInvalidoError,
     StockInsuficienteError,
     VentaNoEncontradaError,
@@ -39,6 +40,11 @@ def crear(
     except StockInsuficienteError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Stock insuficiente para el producto {e.producto_id}"
+        )
+    except LimiteEfectivoExcedidoError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La caja superó el límite de efectivo. Retira el excedente para seguir cobrando.",
         )
 
 

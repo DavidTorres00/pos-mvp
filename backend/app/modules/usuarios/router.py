@@ -8,12 +8,12 @@ from app.core.security import ACCESS_TOKEN_COOKIE_NAME, CSRF_COOKIE_NAME
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import LoginRequest
-from app.schemas.caja import CajaActualOut, CajaCerrarRequest, CajaResumenOut
+from app.schemas.caja import CajaActualOut, CajaCerrarRequest, CajaResumenOut, VoucherRetiroOut
 from app.schemas.pagination import Pagina
 from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPermisosUpdate
 from app.services import auth_service, caja_service, usuario_service
 from app.services.auth_service import CajaAbiertaPropiaError
-from app.services.caja_service import CajaNoAbiertaError
+from app.services.caja_service import CajaNoAbiertaError, SinExcedenteError
 from app.services.usuario_service import EmailDuplicadoError, UsuarioNoEncontradoError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -124,3 +124,15 @@ def cerrar_caja_de_usuario(
         return caja_service.cerrar(db, admin.id, usuario_id, payload.monto_final)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
+
+
+@usuarios_router.post("/{usuario_id}/caja/retirar-excedente", response_model=VoucherRetiroOut)
+def retirar_excedente_de_usuario(
+    usuario_id: int, db: Session = Depends(get_db), admin: Usuario = Depends(get_current_user)
+) -> VoucherRetiroOut:
+    try:
+        return caja_service.retirar_excedente(db, admin, usuario_id)
+    except CajaNoAbiertaError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
+    except SinExcedenteError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay excedente que retirar")

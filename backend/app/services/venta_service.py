@@ -24,6 +24,10 @@ class CajaNoAbiertaError(Exception):
     pass
 
 
+class LimiteEfectivoExcedidoError(Exception):
+    pass
+
+
 class VentaNoEncontradaError(Exception):
     pass
 
@@ -44,6 +48,11 @@ def crear(db: Session, usuario: Usuario, items: list[VentaItemCreate], forma_pag
     caja = caja_service.obtener_abierta(db, usuario_id)
     if caja is None:
         raise CajaNoAbiertaError()
+    # la venta que hace que la caja exceda el límite se permite (no queda a medias); ninguna
+    # venta más (sea cual sea la forma de pago) hasta que se retire el excedente — regla de
+    # negocio explícita para no depender de que el cajero se acuerde de retirar
+    if caja_service.excede_limite(db, caja):
+        raise LimiteEfectivoExcedidoError()
     sucursal_id = usuario.sucursal_id
 
     cantidad_solicitada: dict[int, int] = {}

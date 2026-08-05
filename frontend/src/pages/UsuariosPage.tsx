@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { TableCard } from '@/components/TableCard'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
+import { VoucherRetiroDialog } from '@/features/caja/components/VoucherRetiroDialog'
 import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
 import type { CierreFormValues } from '@/features/caja/schemas/cajaSchema'
 import { UsuarioForm } from '@/features/usuarios/components/UsuarioForm'
@@ -12,13 +13,16 @@ import { useCajaDeUsuario } from '@/features/usuarios/hooks/useCajaDeUsuario'
 import {
   useCerrarCajaDeUsuario,
   useCrearUsuario,
+  useRetirarExcedenteDeUsuario,
   useSetPermisoRetiroExcedente,
 } from '@/features/usuarios/hooks/useUsuarioMutations'
 import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios'
 import type { UsuarioCreateFormValues } from '@/features/usuarios/schemas/usuarioSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { useCrudDialogState } from '@/lib/hooks/useCrudDialogState'
+import { formatCurrency } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
+import type { VoucherRetiro } from '@/services/cajaService'
 import type { Usuario } from '@/services/usuarioService'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -41,6 +45,14 @@ export function UsuariosPage() {
   const { data: resumen } = useCajaResumen(cerrandoCajaDe ? cajaActual?.caja?.id : undefined)
   const cerrar = useCerrarCajaDeUsuario()
 
+  // cuadre de caja rutinario, no una excepción: el admin puede retirar el excedente de
+  // cualquier cajero cuando corresponda, sin depender de que ese cajero tenga el permiso o
+  // esté disponible en ese momento
+  const [retirandoExcedenteDe, setRetirandoExcedenteDe] = useState<Usuario | null>(null)
+  const { data: cajaExcedente } = useCajaDeUsuario(retirandoExcedenteDe?.id)
+  const retirarExcedente = useRetirarExcedenteDeUsuario()
+  const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
+
   function handleCreate(values: UsuarioCreateFormValues) {
     create.mutate({ ...values, sucursal_id: values.sucursal_id as number }, { onSuccess: dialog.closeCreate })
   }
@@ -48,6 +60,16 @@ export function UsuariosPage() {
   function handleCerrarCaja(values: CierreFormValues) {
     if (cerrar.isPending || !cerrandoCajaDe) return
     cerrar.mutate({ id: cerrandoCajaDe.id, monto_final: values.monto_final }, { onSuccess: () => setCerrandoCajaDe(null) })
+  }
+
+  function handleRetirarExcedente() {
+    if (retirarExcedente.isPending || !retirandoExcedenteDe) return
+    retirarExcedente.mutate(retirandoExcedenteDe.id, {
+      onSuccess: (data) => {
+        setRetirandoExcedenteDe(null)
+        setVoucher(data)
+      },
+    })
   }
 
   if (!isAdmin) {
@@ -99,6 +121,7 @@ export function UsuariosPage() {
           usuarios={usuarios}
           onTogglePermiso={handleToggle}
           onCerrarCaja={setCerrandoCajaDe}
+          onRetirarExcedente={setRetirandoExcedenteDe}
           pending={setPermiso.isPending}
         />
       </TableCard>
@@ -119,6 +142,36 @@ export function UsuariosPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={retirandoExcedenteDe !== null} onOpenChange={(open) => !open && setRetirandoExcedenteDe(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirar excedente de {retirandoExcedenteDe?.nombre}</DialogTitle>
+          </DialogHeader>
+          {cajaExcedente && (
+            <div className="flex flex-col gap-1.5 rounded-md border p-3 text-sm tabular-nums">
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">Efectivo en caja</span>
+                {formatCurrency(cajaExcedente.efectivo_actual ?? '0')}
+              </p>
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">Límite configurado</span>
+                {formatCurrency(cajaExcedente.limite_efectivo ?? '0')}
+              </p>
+            </div>
+          )}
+          {retirarExcedente.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {getApiErrorMessage(retirarExcedente.error, 'No se pudo retirar el excedente')}
+            </p>
+          )}
+          <Button onClick={handleRetirarExcedente} disabled={retirarExcedente.isPending}>
+            {retirarExcedente.isPending ? 'Retirando...' : 'Confirmar retiro'}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      <VoucherRetiroDialog voucher={voucher} onClose={() => setVoucher(null)} />
     </div>
   )
 }

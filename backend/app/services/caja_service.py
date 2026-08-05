@@ -135,6 +135,36 @@ def _calcular_resumen(db: Session, caja: CajaSesion) -> CajaResumenOut:
     return _resumen_desde(caja, movimientos, ventas)
 
 
+def _voucher_desde_movimiento(movimiento: MovimientoCaja, caja: CajaSesion) -> VoucherRetiroOut:
+    return VoucherRetiroOut(
+        movimiento_id=movimiento.id,
+        caja_id=caja.id,
+        cajero=caja.usuario_nombre,
+        # quién ejecutó el retiro: el mismo cajero (self-service) o un admin distinto (remoto) —
+        # el frontend decide si vale la pena mostrar esta fila comparándola contra `cajero`
+        autorizado_por=movimiento.usuario_nombre,
+        sucursal_nombre=caja.sucursal_nombre,
+        equipo_nombre=caja.equipo_nombre,
+        fecha=movimiento.created_at,
+        monto_retirado=movimiento.monto,
+        efectivo_anterior=caja.monto_inicial + movimiento.monto,
+        efectivo_resultante=caja.monto_inicial,
+        monto_inicial=caja.monto_inicial,
+    )
+
+
+def excede_limite(db: Session, caja: CajaSesion) -> bool:
+    """True si el efectivo esperado de esta caja YA supera el límite configurado, antes de
+    considerar ninguna venta nueva. Usado por venta_service para bloquear cualquier venta nueva
+    (sea cual sea la forma de pago) mientras la caja siga excedida — la venta que provoca el
+    exceso se permite, ninguna otra hasta retirar el excedente."""
+    limite = configuracion_repository.get(db).limite_efectivo_caja
+    if limite is None:
+        return False
+    efectivo_actual = _calcular_resumen(db, caja).monto_esperado
+    return efectivo_actual > limite
+
+
 def resumenes(db: Session, cajas: list[CajaSesion]) -> list[CajaResumenOut]:
     """Resumen de varias cajas a la vez (p. ej. todas las abiertas, una por sucursal/equipo) con
     2 consultas en lugar de 2 por caja — evita el N+1 de llamar resumen() en un loop."""
@@ -171,12 +201,17 @@ def obtener_actual(db: Session, usuario_id: int) -> CajaActualOut:
     )
 
 
-def retirar_excedente(db: Session, usuario: Usuario) -> VoucherRetiroOut:
-    if usuario.role != RolUsuario.ADMIN and not usuario.puede_retirar_excedente:
+def retirar_excedente(db: Session, actor: Usuario, target_usuario_id: int) -> VoucherRetiroOut:
+    """Retira el excedente de la caja de target_usuario_id, auditando con actor.id. Mismo caso
+    doble que cerrar(): el cajero retirando la suya (target == actor, gateado por
+    puede_retirar_excedente) o el admin retirando la de cualquier cajero (cuadre de caja
+    rutinario, no una excepción — el admin siempre puede, de cualquiera)."""
+    if actor.role != RolUsuario.ADMIN and (not actor.puede_retirar_excedente or actor.id != target_usuario_id):
         raise PermisoRetiroExcedenteError()
 
-    # lock de fila: dos cajeros no deben poder disparar el retiro dos veces sobre el mismo excedente
-    caja = caja_repository.get_abierta_for_update_by_usuario(db, usuario.id)
+    # lock de fila: dos intentos concurrentes no deben poder disparar el retiro dos veces sobre
+    # el mismo excedente (p. ej. el propio cajero y el admin a la vez)
+    caja = caja_repository.get_abierta_for_update_by_usuario(db, target_usuario_id)
     if caja is None:
         raise CajaNoAbiertaError()
 
@@ -189,30 +224,35 @@ def retirar_excedente(db: Session, usuario: Usuario) -> VoucherRetiroOut:
     excedente = efectivo_actual - caja.monto_inicial
     movimiento = MovimientoCaja(
         caja_id=caja.id,
-        usuario_id=usuario.id,
+        usuario_id=actor.id,
         tipo=TipoMovimientoCaja.SALIDA,
         monto=excedente,
-        motivo="Retiro por excedente de efectivo",
+        motivo=caja_repository.MOTIVO_RETIRO_EXCEDENTE,
     )
     movimiento = caja_repository.crear_movimiento(db, movimiento)
     auditoria_service.registrar(
         db,
-        usuario.id,
+        actor.id,
         "caja_retiro_excedente",
         "movimiento_caja",
         movimiento.id,
         {"monto": str(excedente), "efectivo_previo": str(efectivo_actual), "efectivo_resultante": str(caja.monto_inicial)},
     )
-    return VoucherRetiroOut(
-        movimiento_id=movimiento.id,
-        caja_id=caja.id,
-        cajero=usuario.nombre,
-        fecha=movimiento.created_at,
-        monto_retirado=excedente,
-        efectivo_anterior=efectivo_actual,
-        efectivo_resultante=caja.monto_inicial,
-        monto_inicial=caja.monto_inicial,
-    )
+    return _voucher_desde_movimiento(movimiento, caja)
+
+
+def obtener_ultimo_retiro_excedente(db: Session, usuario_id: int) -> VoucherRetiroOut | None:
+    """Para que la pantalla del cajero pueda mostrar/imprimir su propio comprobante aunque el
+    retiro lo haya disparado un admin de forma remota (sesión/dispositivo distinto): no hay nada
+    en tiempo real que le avise, así que el cajero reconstruye el voucher del último retiro de
+    excedente de SU caja cuando detecta que ya no está excedida."""
+    caja = caja_repository.get_abierta_by_usuario(db, usuario_id)
+    if caja is None:
+        return None
+    movimiento = caja_repository.get_ultimo_retiro_excedente(db, caja.id)
+    if movimiento is None:
+        return None
+    return _voucher_desde_movimiento(movimiento, caja)
 
 
 def resumen(db: Session, caja_id: int) -> CajaResumenOut:

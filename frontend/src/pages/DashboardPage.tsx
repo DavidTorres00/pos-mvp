@@ -14,56 +14,34 @@ import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingState } from '@/components/DataStates'
-import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
-import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
 import { formatCurrency } from '@/lib/format'
 import { getCajasAbiertas, getVentasDia } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
+// solo admin llega aquí: el cajero cae directo en /ventas (ver ProtectedLayout), nunca ve Dashboard
 const MODULOS = [
-  { to: '/productos', label: 'Productos', description: 'Catálogo y precios', icon: PackageIcon, adminOnly: false },
-  { to: '/categorias', label: 'Categorías', description: 'Organiza tu catálogo', icon: TagIcon, adminOnly: true },
-  { to: '/inventario', label: 'Inventario', description: 'Entradas y salidas de stock', icon: BoxesIcon, adminOnly: true },
-  {
-    to: '/compras',
-    label: 'Compras',
-    description: 'Registra compras a proveedores',
-    icon: ShoppingCartIcon,
-    adminOnly: true,
-  },
-  { to: '/ventas', label: 'Ventas', description: 'Registra ventas del día', icon: ReceiptIcon, adminOnly: false },
-  { to: '/reportes', label: 'Reportes', description: 'Resumen de ventas y caja', icon: BarChart3Icon, adminOnly: true },
+  { to: '/productos', label: 'Productos', description: 'Catálogo y precios', icon: PackageIcon },
+  { to: '/categorias', label: 'Categorías', description: 'Organiza tu catálogo', icon: TagIcon },
+  { to: '/inventario', label: 'Inventario', description: 'Entradas y salidas de stock', icon: BoxesIcon },
+  { to: '/compras', label: 'Compras', description: 'Registra compras a proveedores', icon: ShoppingCartIcon },
+  { to: '/ventas', label: 'Ventas', description: 'Historial y auditoría de ventas', icon: ReceiptIcon },
+  { to: '/reportes', label: 'Reportes', description: 'Resumen de ventas y caja', icon: BarChart3Icon },
 ]
 
 export function DashboardPage() {
   const usuario = useAuthStore((state) => state.usuario)
-  const isAdmin = usuario?.role === 'admin'
   const { data: ventasDia, isLoading: isLoadingVentas } = useQuery({
     queryKey: ['reporte-ventas-dia'],
     queryFn: () => getVentasDia(),
-    enabled: isAdmin,
   })
-  const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(!isAdmin)
-  const caja = cajaActual?.caja
-  const { data: resumen } = useCajaResumen(caja?.id)
   const { data: cajasAbiertas, isLoading: isLoadingCajasAbiertas } = useQuery({
     queryKey: ['cajas-abiertas'],
     queryFn: getCajasAbiertas,
-    enabled: isAdmin,
   })
   const totalEsperadoCajasAbiertas = (cajasAbiertas ?? []).reduce((sum, c) => sum + Number(c.monto_esperado), 0)
 
   const ticketPromedio =
     ventasDia && ventasDia.cantidad_ventas > 0 ? Number(ventasDia.total_ventas) / ventasDia.cantidad_ventas : null
-
-  const desglose = resumen
-    ? [
-        { label: 'Ventas en efectivo', value: Number(resumen.total_ventas_efectivo), color: 'bg-primary' },
-        { label: 'Entradas manuales', value: Number(resumen.total_entradas), color: 'bg-success' },
-        { label: 'Salidas manuales', value: Number(resumen.total_salidas), color: 'bg-destructive' },
-      ]
-    : []
-  const desgloseTotal = desglose.reduce((sum, item) => sum + Math.abs(item.value), 0)
 
   return (
     <div className="flex w-full flex-col gap-6 p-6">
@@ -81,9 +59,7 @@ export function DashboardPage() {
             </span>
           </CardHeader>
           <CardContent>
-            {!isAdmin ? (
-              <p className="text-sm text-muted-foreground">Disponible solo para administradores.</p>
-            ) : isLoadingVentas || !ventasDia ? (
+            {isLoadingVentas || !ventasDia ? (
               <LoadingState />
             ) : (
               <div className="flex flex-col gap-1">
@@ -107,53 +83,18 @@ export function DashboardPage() {
             </span>
           </CardHeader>
           <CardContent>
-            {isAdmin ? (
-              isLoadingCajasAbiertas ? (
-                <LoadingState />
-              ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
-                    {formatCurrency(totalEsperadoCajasAbiertas)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Esperado en total · {cajasAbiertas.length} {cajasAbiertas.length === 1 ? 'caja abierta' : 'cajas abiertas'}
-                  </p>
-                </div>
-              )
-            ) : isLoadingCaja ? (
+            {isLoadingCajasAbiertas ? (
               <LoadingState />
-            ) : !caja ? (
-              <p className="text-sm text-muted-foreground">
-                No hay caja abierta.{' '}
-                <Link to="/caja" className="font-medium text-primary underline underline-offset-2">
-                  Abrir caja
-                </Link>
-              </p>
+            ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
             ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-col gap-1">
-                  <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
-                    {formatCurrency(resumen?.monto_esperado ?? caja.monto_inicial)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Monto esperado en caja abierta</p>
-                </div>
-
-                {resumen && desgloseTotal > 0 && (
-                  <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
-                    {desglose.map((item) =>
-                      item.value > 0 ? (
-                        <div
-                          key={item.label}
-                          className={item.color}
-                          style={{ width: `${(item.value / desgloseTotal) * 100}%` }}
-                          title={`${item.label}: ${formatCurrency(item.value)}`}
-                        />
-                      ) : null,
-                    )}
-                  </div>
-                )}
+              <div className="flex flex-col gap-1">
+                <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
+                  {formatCurrency(totalEsperadoCajasAbiertas)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Esperado en total · {cajasAbiertas.length} {cajasAbiertas.length === 1 ? 'caja abierta' : 'cajas abiertas'}
+                </p>
               </div>
             )}
           </CardContent>
@@ -163,7 +104,7 @@ export function DashboardPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Accesos rápidos</h2>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {MODULOS.filter((modulo) => !modulo.adminOnly || isAdmin).map((modulo) => (
+          {MODULOS.map((modulo) => (
             <Link
               key={modulo.to}
               to={modulo.to}

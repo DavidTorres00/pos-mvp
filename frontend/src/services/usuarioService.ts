@@ -1,5 +1,5 @@
 import { api } from '@/services/api'
-import type { CajaActual, CajaResumen } from '@/services/cajaService'
+import type { CajaActual, CajaResumen, VoucherRetiro } from '@/services/cajaService'
 import type { PaginatedResponse } from '@/services/pagination'
 
 export interface Usuario {
@@ -48,5 +48,10 @@ export async function getCajaDeUsuario(id: number): Promise<CajaActual> {
 
 export async function cerrarCajaDeUsuario(id: number, monto_final: number): Promise<CajaResumen> {
   const { data } = await api.post<CajaResumen>(`/usuarios/${id}/caja/cerrar`, { monto_final })
+  return data
+}
+
+export async function retirarExcedenteDeUsuario(id: number): Promise<VoucherRetiro> {
+  const { data } = await api.post<VoucherRetiro>(`/usuarios/${id}/caja/retirar-excedente`)
   return data
 }

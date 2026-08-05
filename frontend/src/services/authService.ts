@@ -11,6 +11,11 @@ export async function login(payload: LoginPayload): Promise<Usuario> {
   return data
 }
 
+export async function getMe(): Promise<Usuario> {
+  const { data } = await api.get<Usuario>('/auth/me')
+  return data
+}
+
 export async function logout(): Promise<void> {
   await api.post('/auth/logout')
 }

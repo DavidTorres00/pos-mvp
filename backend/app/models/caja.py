@@ -31,3 +31,7 @@ class CajaSesion(Base):
     @property
     def equipo_nombre(self) -> str:
         return self.equipo.nombre
+
+    @property
+    def sucursal_nombre(self) -> str:
+        return self.equipo.sucursal.nombre

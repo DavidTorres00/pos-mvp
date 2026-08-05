@@ -9,6 +9,7 @@ export interface Caja {
   usuario_nombre: string
   equipo_id: number
   equipo_nombre: string
+  sucursal_nombre: string
   monto_inicial: string
   monto_final: string | null
   abierta: boolean
@@ -38,6 +39,9 @@ export interface VoucherRetiro {
   movimiento_id: number
   caja_id: number
   cajero: string
+  autorizado_por: string
+  sucursal_nombre: string
+  equipo_nombre: string
   fecha: string
   monto_retirado: string
   efectivo_anterior: string
@@ -69,6 +73,11 @@ export async function getCajaActual(): Promise<CajaActual> {
 
 export async function retirarExcedenteCaja(): Promise<VoucherRetiro> {
   const { data } = await api.post<VoucherRetiro>('/caja/retirar-excedente')
+  return data
+}
+
+export async function getUltimoRetiroExcedente(): Promise<VoucherRetiro | null> {
+  const { data } = await api.get<VoucherRetiro | null>('/caja/ultimo-retiro-excedente')
   return data
 }
 

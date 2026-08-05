@@ -10,9 +10,9 @@ export function LoginPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
   if (isAuthenticated) {
-    // el cajero llega a trabajar con su monto inicial ya contado — lo manda directo a
-    // abrir/ver su caja en vez de al Dashboard, que es vista de admin
-    return <Navigate to={usuario?.role === 'cajero' ? '/caja' : '/'} replace />
+    // el cajero cae directo en su pantalla de venta (que ya exige caja abierta antes de
+    // dejarlo pasar, ver ProtectedLayout) en vez del Dashboard, que es vista de admin
+    return <Navigate to={usuario?.role === 'cajero' ? '/ventas' : '/'} replace />
   }
 
   return (

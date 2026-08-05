@@ -41,6 +41,7 @@ class CajaOut(BaseModel):
     usuario_nombre: str
     equipo_id: int
     equipo_nombre: str
+    sucursal_nombre: str
     monto_inicial: Decimal
     monto_final: Decimal | None
     abierta: bool
@@ -71,6 +72,9 @@ class VoucherRetiroOut(BaseModel):
     movimiento_id: int
     caja_id: int
     cajero: str
+    autorizado_por: str
+    sucursal_nombre: str
+    equipo_nombre: str
     fecha: datetime
     monto_retirado: Decimal
     efectivo_anterior: Decimal

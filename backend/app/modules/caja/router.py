@@ -101,7 +101,7 @@ def listar_movimientos(
 @router.post("/retirar-excedente", response_model=VoucherRetiroOut, status_code=status.HTTP_201_CREATED)
 def retirar_excedente(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> VoucherRetiroOut:
     try:
-        return caja_service.retirar_excedente(db, usuario)
+        return caja_service.retirar_excedente(db, usuario, usuario.id)
     except PermisoRetiroExcedenteError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="No tenés permiso para retirar el excedente de caja"
@@ -110,6 +110,13 @@ def retirar_excedente(db: Session = Depends(get_db), usuario: Usuario = Depends(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
     except SinExcedenteError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay excedente que retirar")
+
+
+@router.get("/ultimo-retiro-excedente", response_model=VoucherRetiroOut | None)
+def ultimo_retiro_excedente(
+    db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> VoucherRetiroOut | None:
+    return caja_service.obtener_ultimo_retiro_excedente(db, usuario.id)
 
 
 @router.get("/{caja_id}/resumen", response_model=CajaResumenOut)

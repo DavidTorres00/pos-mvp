@@ -9,10 +9,11 @@ interface UsuariosTableProps {
   usuarios: Usuario[]
   onTogglePermiso: (usuario: Usuario) => void
   onCerrarCaja: (usuario: Usuario) => void
+  onRetirarExcedente: (usuario: Usuario) => void
   pending: boolean
 }
 
-export function UsuariosTable({ usuarios, onTogglePermiso, onCerrarCaja, pending }: UsuariosTableProps) {
+export function UsuariosTable({ usuarios, onTogglePermiso, onCerrarCaja, onRetirarExcedente, pending }: UsuariosTableProps) {
   if (usuarios.length === 0) {
     return <EmptyState message="No hay usuarios." bordered={false} />
   }
@@ -54,9 +55,14 @@ export function UsuariosTable({ usuarios, onTogglePermiso, onCerrarCaja, pending
                   {usuario.caja_activa ? 'Caja activa' : 'Sin caja'}
                 </span>
                 {usuario.caja_activa && (
-                  <Button variant="outline" size="sm" onClick={() => onCerrarCaja(usuario)}>
-                    Cerrar caja
-                  </Button>
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => onRetirarExcedente(usuario)}>
+                      Retirar excedente
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => onCerrarCaja(usuario)}>
+                      Cerrar caja
+                    </Button>
+                  </>
                 )}
               </div>
             </TableCell>
