@@ -15,14 +15,14 @@ import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
 import { formatCurrency } from '@/lib/format'
-import type { Producto } from '@/services/productoService'
+import type { ProductoConStock } from '@/services/productoService'
 
 interface ProductosTableProps {
-  productos: Producto[]
+  productos: ProductoConStock[]
   canManage: boolean
   emptyMessage?: string
-  onEdit: (producto: Producto) => void
-  onToggleEstado: (producto: Producto) => void
+  onEdit: (producto: ProductoConStock) => void
+  onToggleEstado: (producto: ProductoConStock) => void
 }
 
 export function ProductosTable({
@@ -32,7 +32,7 @@ export function ProductosTable({
   onEdit,
   onToggleEstado,
 }: ProductosTableProps) {
-  const [pending, setPending] = useState<Producto | null>(null)
+  const [pending, setPending] = useState<ProductoConStock | null>(null)
 
   if (productos.length === 0) {
     return <EmptyState message={emptyMessage} bordered={false} />

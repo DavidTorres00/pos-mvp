@@ -1,10 +1,11 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+from app.models.sucursal import Sucursal
 
 
 class RolUsuario(str, enum.Enum):
@@ -25,3 +26,12 @@ class Usuario(Base):
     # admin lo otorga por cajero según convenga operativamente (§4.3)
     puede_retirar_excedente: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # nulo para admin (ve todas las sucursales remotamente); obligatorio para cajero, forzado por
+    # ck_usuarios_cajero_requiere_sucursal a nivel de base de datos, no solo validación de app
+    sucursal_id: Mapped[int | None] = mapped_column(ForeignKey("sucursales.id"), nullable=True)
+    sucursal: Mapped[Sucursal | None] = relationship(lazy="joined")
+
+    @property
+    def sucursal_nombre(self) -> str | None:
+        return self.sucursal.nombre if self.sucursal is not None else None

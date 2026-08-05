@@ -31,8 +31,8 @@ def _validar_referencias(db: Session, producto_id: int, proveedor_id: int) -> No
         raise ProveedorInvalidoError(proveedor_id)
 
 
-def listar(db: Session, page: int, size: int) -> tuple[list[ReglaReorden], int]:
-    return regla_reorden_repository.get_all(db, page, size)
+def listar(db: Session, sucursal_id: int, page: int, size: int) -> tuple[list[ReglaReorden], int]:
+    return regla_reorden_repository.get_all(db, sucursal_id, page, size)
 
 
 def obtener(db: Session, regla_id: int) -> ReglaReorden:
@@ -46,16 +46,18 @@ def crear(
     db: Session,
     usuario_id: int,
     producto_id: int,
+    sucursal_id: int,
     proveedor_id: int,
     umbral_stock: int,
     cantidad_pedido: int,
     costo_unitario_estimado: Decimal,
 ) -> ReglaReorden:
     _validar_referencias(db, producto_id, proveedor_id)
-    if regla_reorden_repository.get_by_producto(db, producto_id) is not None:
+    if regla_reorden_repository.get_by_producto(db, producto_id, sucursal_id) is not None:
         raise ReglaYaExisteError(producto_id)
     regla = ReglaReorden(
         producto_id=producto_id,
+        sucursal_id=sucursal_id,
         proveedor_id=proveedor_id,
         umbral_stock=umbral_stock,
         cantidad_pedido=cantidad_pedido,

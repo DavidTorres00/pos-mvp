@@ -1,6 +1,7 @@
 import { api } from '@/services/api'
 import type { Producto } from '@/services/productoService'
 import type { Proveedor } from '@/services/proveedorService'
+import type { Sucursal } from '@/services/sucursalService'
 import type { Usuario } from '@/services/usuarioService'
 import type { PaginatedResponse } from '@/services/pagination'
 
@@ -11,6 +12,8 @@ export interface OrdenReorden {
   regla_reorden_id: number
   producto_id: number
   producto: Producto
+  sucursal_id: number
+  sucursal: Sucursal
   proveedor_id: number
   proveedor: Proveedor
   cantidad: number
@@ -25,9 +28,12 @@ export interface OrdenReorden {
 }
 
 export async function listOrdenesReorden(
-  params: { estado?: EstadoOrdenReorden; page?: number; size?: number } = {},
+  params: { estado?: EstadoOrdenReorden; sucursalId?: number | null; page?: number; size?: number } = {},
 ): Promise<PaginatedResponse<OrdenReorden>> {
-  const { data } = await api.get<PaginatedResponse<OrdenReorden>>('/ordenes-reorden', { params })
+  const { estado, sucursalId, page, size } = params
+  const { data } = await api.get<PaginatedResponse<OrdenReorden>>('/ordenes-reorden', {
+    params: { estado, sucursal_id: sucursalId ?? undefined, page, size },
+  })
   return data
 }
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_role
+from app.api.deps import require_role, resolve_sucursal_id
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
@@ -27,9 +27,11 @@ router = APIRouter(
 
 @router.get("", response_model=Pagina[ReglaReordenOut])
 def listar(
-    paginacion: ParametrosPaginacion = Depends(parametros_paginacion), db: Session = Depends(get_db)
+    sucursal_id: int = Depends(resolve_sucursal_id),
+    paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
+    db: Session = Depends(get_db),
 ) -> Pagina[ReglaReordenOut]:
-    items, total = regla_reorden_service.listar(db, paginacion.page, paginacion.size)
+    items, total = regla_reorden_service.listar(db, sucursal_id, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
@@ -38,12 +40,14 @@ def crear(
     payload: ReglaReordenCreate,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(require_role(RolUsuario.ADMIN)),
+    sucursal_id: int = Depends(resolve_sucursal_id),
 ) -> ReglaReordenOut:
     try:
         return regla_reorden_service.crear(
             db,
             usuario.id,
             payload.producto_id,
+            sucursal_id,
             payload.proveedor_id,
             payload.umbral_stock,
             payload.cantidad_pedido,

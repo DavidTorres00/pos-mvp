@@ -2,11 +2,14 @@ import { api } from '@/services/api'
 import type { Producto } from '@/services/productoService'
 import type { Proveedor } from '@/services/proveedorService'
 import type { PaginatedResponse } from '@/services/pagination'
+import type { Sucursal } from '@/services/sucursalService'
 
 export interface ReglaReorden {
   id: number
   producto_id: number
   producto: Producto
+  sucursal_id: number
+  sucursal: Sucursal
   proveedor_id: number
   proveedor: Proveedor
   umbral_stock: number
@@ -25,14 +28,22 @@ export interface ReglaReordenPayload {
 }
 
 export async function listReglasReorden(
-  params: { page?: number; size?: number } = {},
+  params: { sucursalId?: number | null; page?: number; size?: number } = {},
 ): Promise<PaginatedResponse<ReglaReorden>> {
-  const { data } = await api.get<PaginatedResponse<ReglaReorden>>('/reglas-reorden', { params })
+  const { sucursalId, page, size } = params
+  const { data } = await api.get<PaginatedResponse<ReglaReorden>>('/reglas-reorden', {
+    params: { sucursal_id: sucursalId ?? undefined, page, size },
+  })
   return data
 }
 
-export async function createReglaReorden(payload: ReglaReordenPayload): Promise<ReglaReorden> {
-  const { data } = await api.post<ReglaReorden>('/reglas-reorden', payload)
+export async function createReglaReorden(
+  payload: ReglaReordenPayload,
+  sucursalId?: number | null,
+): Promise<ReglaReorden> {
+  const { data } = await api.post<ReglaReorden>('/reglas-reorden', payload, {
+    params: { sucursal_id: sucursalId ?? undefined },
+  })
   return data
 }
 

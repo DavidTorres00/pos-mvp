@@ -17,7 +17,7 @@ import { LoadingState } from '@/components/DataStates'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
 import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
 import { formatCurrency } from '@/lib/format'
-import { getVentasDia } from '@/services/reporteService'
+import { getCajasAbiertas, getVentasDia } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
 const MODULOS = [
@@ -43,9 +43,15 @@ export function DashboardPage() {
     queryFn: () => getVentasDia(),
     enabled: isAdmin,
   })
-  const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual()
+  const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(!isAdmin)
   const caja = cajaActual?.caja
   const { data: resumen } = useCajaResumen(caja?.id)
+  const { data: cajasAbiertas, isLoading: isLoadingCajasAbiertas } = useQuery({
+    queryKey: ['cajas-abiertas'],
+    queryFn: getCajasAbiertas,
+    enabled: isAdmin,
+  })
+  const totalEsperadoCajasAbiertas = (cajasAbiertas ?? []).reduce((sum, c) => sum + Number(c.monto_esperado), 0)
 
   const ticketPromedio =
     ventasDia && ventasDia.cantidad_ventas > 0 ? Number(ventasDia.total_ventas) / ventasDia.cantidad_ventas : null
@@ -101,7 +107,22 @@ export function DashboardPage() {
             </span>
           </CardHeader>
           <CardContent>
-            {isLoadingCaja ? (
+            {isAdmin ? (
+              isLoadingCajasAbiertas ? (
+                <LoadingState />
+              ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
+                    {formatCurrency(totalEsperadoCajasAbiertas)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Esperado en total · {cajasAbiertas.length} {cajasAbiertas.length === 1 ? 'caja abierta' : 'cajas abiertas'}
+                  </p>
+                </div>
+              )
+            ) : isLoadingCaja ? (
               <LoadingState />
             ) : !caja ? (
               <p className="text-sm text-muted-foreground">

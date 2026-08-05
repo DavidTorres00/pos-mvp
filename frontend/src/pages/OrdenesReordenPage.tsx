@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ErrorState } from '@/components/DataStates'
+import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
 import { OrdenesReordenTable } from '@/features/ordenes-reorden/components/OrdenesReordenTable'
 import { useAprobarOrdenReorden, useRechazarOrdenReorden } from '@/features/ordenes-reorden/hooks/useOrdenReordenMutations'
@@ -68,6 +69,7 @@ export function OrdenesReordenPage() {
             Limpiar filtros
           </Button>
         )}
+        <SucursalActivaSelector />
       </div>
 
       {(aprobar.isError || rechazar.isError) && (

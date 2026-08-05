@@ -26,3 +26,6 @@ export const CajaPage = lazy(() => import('@/pages/CajaPage').then((m) => ({ def
 export const ComprasPage = lazy(() => import('@/pages/ComprasPage').then((m) => ({ default: m.ComprasPage })))
 export const VentasPage = lazy(() => import('@/pages/VentasPage').then((m) => ({ default: m.VentasPage })))
 export const ReportesPage = lazy(() => import('@/pages/ReportesPage').then((m) => ({ default: m.ReportesPage })))
+export const SucursalesPage = lazy(() =>
+  import('@/pages/SucursalesPage').then((m) => ({ default: m.SucursalesPage })),
+)

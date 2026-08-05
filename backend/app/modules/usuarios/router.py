@@ -8,9 +8,12 @@ from app.core.security import ACCESS_TOKEN_COOKIE_NAME, CSRF_COOKIE_NAME
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import LoginRequest
+from app.schemas.caja import CajaActualOut, CajaCerrarRequest, CajaResumenOut
 from app.schemas.pagination import Pagina
 from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPermisosUpdate
-from app.services import auth_service, usuario_service
+from app.services import auth_service, caja_service, usuario_service
+from app.services.auth_service import CajaAbiertaPropiaError
+from app.services.caja_service import CajaNoAbiertaError
 from app.services.usuario_service import EmailDuplicadoError, UsuarioNoEncontradoError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -50,7 +53,16 @@ def login(payload: LoginRequest, response: Response, db: Session = Depends(get_d
 
 
 @router.post("/logout")
-def logout(response: Response) -> dict[str, str]:
+def logout(
+    response: Response, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+) -> dict[str, str]:
+    try:
+        auth_service.cerrar_sesion(db, usuario)
+    except CajaAbiertaPropiaError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Tienes la caja abierta. Cierra tu caja (haz el corte) antes de cerrar sesión.",
+        )
     response.delete_cookie(ACCESS_TOKEN_COOKIE_NAME, path="/")
     response.delete_cookie(CSRF_COOKIE_NAME, path="/")
     return {"detail": "sesión cerrada"}
@@ -76,7 +88,9 @@ def crear(
     usuario: Usuario = Depends(get_current_user),
 ) -> UsuarioOut:
     try:
-        return usuario_service.crear(db, usuario.id, payload.email, payload.nombre, payload.password)
+        return usuario_service.crear(
+            db, usuario.id, payload.email, payload.nombre, payload.password, payload.sucursal_id
+        )
     except EmailDuplicadoError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya está registrado")
 
@@ -92,3 +106,21 @@ def actualizar_permisos(
         return usuario_service.actualizar_permisos(db, usuario.id, usuario_id, payload.puede_retirar_excedente)
     except UsuarioNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+
+@usuarios_router.get("/{usuario_id}/caja", response_model=CajaActualOut)
+def caja_de_usuario(usuario_id: int, db: Session = Depends(get_db)) -> CajaActualOut:
+    return caja_service.obtener_actual(db, usuario_id)
+
+
+@usuarios_router.post("/{usuario_id}/caja/cerrar", response_model=CajaResumenOut)
+def cerrar_caja_de_usuario(
+    usuario_id: int,
+    payload: CajaCerrarRequest,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_user),
+) -> CajaResumenOut:
+    try:
+        return caja_service.cerrar(db, admin.id, usuario_id, payload.monto_final)
+    except CajaNoAbiertaError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")

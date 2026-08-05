@@ -2,7 +2,8 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models.usuario import RolUsuario, Usuario
-from app.repositories import usuario_repository
+from app.repositories import caja_repository, usuario_repository
+from app.schemas.usuario import UsuarioOut
 from app.services import auditoria_service
 
 
@@ -14,11 +15,18 @@ class EmailDuplicadoError(Exception):
     pass
 
 
-def listar(db: Session, page: int, size: int) -> tuple[list[Usuario], int]:
-    return usuario_repository.get_all(db, page, size)
+def listar(db: Session, page: int, size: int) -> tuple[list[UsuarioOut], int]:
+    usuarios, total = usuario_repository.get_all(db, page, size)
+    # un solo set de usuario_ids con caja abierta ahora mismo, evita N+1 (una consulta por fila)
+    usuarios_con_caja_activa = {c.usuario_id for c in caja_repository.get_abiertas(db)}
+    items = [
+        UsuarioOut.model_validate(u).model_copy(update={"caja_activa": u.id in usuarios_con_caja_activa})
+        for u in usuarios
+    ]
+    return items, total
 
 
-def crear(db: Session, actor_id: int, email: str, nombre: str, password: str) -> Usuario:
+def crear(db: Session, actor_id: int, email: str, nombre: str, password: str, sucursal_id: int) -> Usuario:
     if usuario_repository.get_by_email(db, email) is not None:
         raise EmailDuplicadoError(email)
     usuario = Usuario(
@@ -27,6 +35,7 @@ def crear(db: Session, actor_id: int, email: str, nombre: str, password: str) ->
         password_hash=hash_password(password),
         role=RolUsuario.CAJERO,
         activo=True,
+        sucursal_id=sucursal_id,
     )
     usuario = usuario_repository.create(db, usuario)
     auditoria_service.registrar(db, actor_id, "usuario_creado", "usuario", usuario.id, {"email": email})

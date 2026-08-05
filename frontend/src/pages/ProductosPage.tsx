@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
 import { ProductoForm } from '@/features/productos/components/ProductoForm'
 import { ProductosTable } from '@/features/productos/components/ProductosTable'
@@ -58,6 +59,7 @@ export function ProductosPage() {
               Limpiar filtros
             </Button>
           )}
+          {isAdmin && <SucursalActivaSelector />}
         </div>
         {isAdmin && (
           <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>

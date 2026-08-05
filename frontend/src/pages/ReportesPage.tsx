@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingState } from '@/components/DataStates'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { getReporteCaja, getVentasDia } from '@/services/reporteService'
+import { getCajasAbiertas, getVentasDia } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
 export function ReportesPage() {
@@ -18,11 +18,10 @@ export function ReportesPage() {
     queryFn: () => getVentasDia(fecha || undefined),
     enabled: isAdmin,
   })
-  const { data: reporteCaja, isLoading: isLoadingCaja } = useQuery({
-    queryKey: ['reporte-caja'],
-    queryFn: getReporteCaja,
+  const { data: cajasAbiertas, isLoading: isLoadingCajas } = useQuery({
+    queryKey: ['cajas-abiertas'],
+    queryFn: getCajasAbiertas,
     enabled: isAdmin,
-    retry: false,
   })
 
   if (!isAdmin) {
@@ -74,41 +73,42 @@ export function ReportesPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Resumen de caja {reporteCaja?.caja.abierta ? '(abierta)' : '(último cierre)'}</CardTitle>
+            <CardTitle>Cajas abiertas</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoadingCaja ? (
+            {isLoadingCajas ? (
               <LoadingState />
-            ) : !reporteCaja ? (
-              <p className="text-sm text-muted-foreground">Aún no hay ninguna caja registrada.</p>
+            ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
             ) : (
-              <div className="flex flex-col gap-1.5 text-sm">
-                <p className="flex justify-between tabular-nums">
-                  <span className="text-muted-foreground">Monto inicial</span>{' '}
-                  {formatCurrency(reporteCaja.caja.monto_inicial)}
-                </p>
-                <p className="flex justify-between tabular-nums">
-                  <span className="text-muted-foreground">Ventas en efectivo</span>{' '}
-                  {formatCurrency(reporteCaja.total_ventas_efectivo)}
-                </p>
-                <p className="flex justify-between tabular-nums">
-                  <span className="text-muted-foreground">Entradas manuales</span>{' '}
-                  {formatCurrency(reporteCaja.total_entradas)}
-                </p>
-                <p className="flex justify-between tabular-nums">
-                  <span className="text-muted-foreground">Salidas manuales</span>{' '}
-                  {formatCurrency(reporteCaja.total_salidas)}
-                </p>
-                <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">
-                  <span className="font-medium text-foreground">Monto esperado</span>{' '}
-                  {formatCurrency(reporteCaja.monto_esperado)}
-                </p>
-                {reporteCaja.diferencia !== null && (
-                  <p className="flex justify-between tabular-nums">
-                    <span className="text-muted-foreground">Diferencia al cierre</span>{' '}
-                    {formatCurrency(reporteCaja.diferencia)}
-                  </p>
-                )}
+              <div className="flex flex-col gap-4">
+                {cajasAbiertas.map((reporteCaja) => (
+                  <div key={reporteCaja.caja.id} className="flex flex-col gap-1.5 border-b pb-4 text-sm last:border-b-0 last:pb-0">
+                    <p className="font-medium text-foreground">
+                      {reporteCaja.caja.usuario_nombre} · {reporteCaja.caja.equipo_nombre}
+                    </p>
+                    <p className="flex justify-between tabular-nums">
+                      <span className="text-muted-foreground">Monto inicial</span>{' '}
+                      {formatCurrency(reporteCaja.caja.monto_inicial)}
+                    </p>
+                    <p className="flex justify-between tabular-nums">
+                      <span className="text-muted-foreground">Ventas en efectivo</span>{' '}
+                      {formatCurrency(reporteCaja.total_ventas_efectivo)}
+                    </p>
+                    <p className="flex justify-between tabular-nums">
+                      <span className="text-muted-foreground">Entradas manuales</span>{' '}
+                      {formatCurrency(reporteCaja.total_entradas)}
+                    </p>
+                    <p className="flex justify-between tabular-nums">
+                      <span className="text-muted-foreground">Salidas manuales</span>{' '}
+                      {formatCurrency(reporteCaja.total_salidas)}
+                    </p>
+                    <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">
+                      <span className="font-medium text-foreground">Monto esperado</span>{' '}
+                      {formatCurrency(reporteCaja.monto_esperado)}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

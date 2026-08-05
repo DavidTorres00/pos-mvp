@@ -12,7 +12,7 @@ export async function getVentasDia(fecha?: string): Promise<VentasDia> {
   return data
 }
 
-export async function getReporteCaja(): Promise<CajaResumen> {
-  const { data } = await api.get<CajaResumen>('/reportes/caja')
+export async function getCajasAbiertas(): Promise<CajaResumen[]> {
+  const { data } = await api.get<CajaResumen[]>('/reportes/cajas-abiertas')
   return data
 }

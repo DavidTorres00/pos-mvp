@@ -17,6 +17,7 @@ import {
   ProveedoresPage,
   ReglasReordenPage,
   ReportesPage,
+  SucursalesPage,
   UsuariosPage,
   VentasPage,
 } from '@/app/lazyPages'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
       { path: 'reportes', element: <ReportesPage /> },
       { path: 'auditoria', element: <AuditoriaPage /> },
       { path: 'usuarios', element: <UsuariosPage /> },
+      { path: 'sucursales', element: <SucursalesPage /> },
       { path: 'configuracion', element: <ConfiguracionPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

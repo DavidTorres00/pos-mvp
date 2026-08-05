@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from app.models.orden_reorden import EstadoOrdenReorden
 from app.schemas.producto import ProductoOut
 from app.schemas.proveedor import ProveedorOut
+from app.schemas.sucursal import SucursalOut
 from app.schemas.usuario import UsuarioOut
 
 
@@ -16,6 +17,8 @@ class OrdenReordenOut(BaseModel):
     regla_reorden_id: int
     producto_id: int
     producto: ProductoOut
+    sucursal_id: int
+    sucursal: SucursalOut
     proveedor_id: int
     proveedor: ProveedorOut
     cantidad: int

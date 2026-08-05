@@ -28,12 +28,13 @@ export interface ListMovimientosParams {
   tipo?: TipoMovimiento
   desde?: string
   hasta?: string
+  sucursalId?: number | null
   page?: number
   size?: number
 }
 
 export async function listMovimientos(params: ListMovimientosParams = {}): Promise<PaginatedResponse<Movimiento>> {
-  const { productoId, q, tipo, desde, hasta, page, size } = params
+  const { productoId, q, tipo, desde, hasta, sucursalId, page, size } = params
   const { data } = await api.get<PaginatedResponse<Movimiento>>('/inventario/movimientos', {
     params: {
       producto_id: productoId,
@@ -41,6 +42,7 @@ export async function listMovimientos(params: ListMovimientosParams = {}): Promi
       tipo: tipo || undefined,
       desde: desde || undefined,
       hasta: hasta || undefined,
+      sucursal_id: sucursalId ?? undefined,
       page,
       size,
     },
@@ -48,7 +50,9 @@ export async function listMovimientos(params: ListMovimientosParams = {}): Promi
   return data
 }
 
-export async function createMovimiento(payload: MovimientoPayload): Promise<Movimiento> {
-  const { data } = await api.post<Movimiento>('/inventario/movimientos', payload)
+export async function createMovimiento(payload: MovimientoPayload, sucursalId?: number | null): Promise<Movimiento> {
+  const { data } = await api.post<Movimiento>('/inventario/movimientos', payload, {
+    params: { sucursal_id: sucursalId ?? undefined },
+  })
   return data
 }

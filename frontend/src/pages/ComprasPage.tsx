@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
 import { CompraForm } from '@/features/compras/components/CompraForm'
 import { ComprasTable } from '@/features/compras/components/ComprasTable'
@@ -48,23 +49,26 @@ export function ComprasPage() {
     <div className="flex w-full flex-col gap-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold tracking-tight">Compras</h1>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>Nueva compra</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Nueva compra</DialogTitle>
-            </DialogHeader>
-            <CompraForm
-              isPending={crear.isPending}
-              errorMessage={
-                crear.isError ? getApiErrorMessage(crear.error, 'No se pudo registrar la compra') : undefined
-              }
-              onSubmit={handleCreate}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-3">
+          <SucursalActivaSelector />
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>Nueva compra</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Nueva compra</DialogTitle>
+              </DialogHeader>
+              <CompraForm
+                isPending={crear.isPending}
+                errorMessage={
+                  crear.isError ? getApiErrorMessage(crear.error, 'No se pudo registrar la compra') : undefined
+                }
+                onSubmit={handleCreate}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <TableCard

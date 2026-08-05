@@ -8,8 +8,12 @@ from app.models.orden_reorden import EstadoOrdenReorden, OrdenReorden
 from app.repositories.pagination import paginar
 
 
-def get_all(db: Session, estado: EstadoOrdenReorden | None, page: int, size: int) -> tuple[list[OrdenReorden], int]:
-    stmt = select(OrdenReorden).order_by(OrdenReorden.created_at.desc())
+def get_all(
+    db: Session, sucursal_id: int, estado: EstadoOrdenReorden | None, page: int, size: int
+) -> tuple[list[OrdenReorden], int]:
+    stmt = (
+        select(OrdenReorden).where(OrdenReorden.sucursal_id == sucursal_id).order_by(OrdenReorden.created_at.desc())
+    )
     if estado is not None:
         stmt = stmt.where(OrdenReorden.estado == estado)
     return paginar(db, stmt, page, size)

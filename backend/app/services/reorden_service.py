@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.orden_reorden import EstadoOrdenReorden, OrdenReorden
-from app.repositories import orden_reorden_repository, producto_repository, regla_reorden_repository
+from app.repositories import orden_reorden_repository, regla_reorden_repository, stock_sucursal_repository
 from app.services import auditoria_service
 
 
@@ -14,17 +14,18 @@ class OrdenNoPendienteError(Exception):
     pass
 
 
-def disparar_si_corresponde(db: Session, producto_id: int) -> None:
-    """Se llama tras cada salida de inventario (venta, salida manual). Si el producto tiene una
-    regla de reorden activa y su stock llegó al umbral, crea una OrdenReorden pendiente. La
-    combinación de pre-check + índice único parcial (una pendiente por regla) evita duplicados
-    aunque dos salidas concurrentes crucen el umbral al mismo tiempo."""
-    regla = regla_reorden_repository.get_by_producto(db, producto_id)
+def disparar_si_corresponde(db: Session, producto_id: int, sucursal_id: int) -> None:
+    """Se llama tras cada salida de inventario (venta, salida manual) en una sucursal. Si el
+    producto tiene una regla de reorden activa PARA ESA SUCURSAL y su stock ahí llegó al umbral,
+    crea una OrdenReorden pendiente. La combinación de pre-check + índice único parcial (una
+    pendiente por regla) evita duplicados aunque dos salidas concurrentes crucen el umbral."""
+    regla = regla_reorden_repository.get_by_producto(db, producto_id, sucursal_id)
     if regla is None or not regla.activo:
         return
 
-    producto = producto_repository.get_by_id(db, producto_id)
-    if producto is None or producto.stock > regla.umbral_stock:
+    stock = stock_sucursal_repository.get(db, producto_id, sucursal_id)
+    cantidad_actual = stock.cantidad if stock is not None else 0
+    if cantidad_actual > regla.umbral_stock:
         return
 
     if orden_reorden_repository.get_pendiente_by_regla(db, regla.id) is not None:
@@ -34,6 +35,7 @@ def disparar_si_corresponde(db: Session, producto_id: int) -> None:
     orden = OrdenReorden(
         regla_reorden_id=regla.id,
         producto_id=regla.producto_id,
+        sucursal_id=regla.sucursal_id,
         proveedor_id=regla.proveedor_id,
         cantidad=regla.cantidad_pedido,
         monto_estimado=monto_estimado,
@@ -55,9 +57,9 @@ def disparar_si_corresponde(db: Session, producto_id: int) -> None:
 
 
 def listar(
-    db: Session, estado: EstadoOrdenReorden | None, page: int, size: int
+    db: Session, sucursal_id: int, estado: EstadoOrdenReorden | None, page: int, size: int
 ) -> tuple[list[OrdenReorden], int]:
-    return orden_reorden_repository.get_all(db, estado, page, size)
+    return orden_reorden_repository.get_all(db, sucursal_id, estado, page, size)
 
 
 def rechazar(db: Session, usuario_id: int, orden_id: int) -> OrdenReorden:

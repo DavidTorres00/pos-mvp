@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
 import { MovimientoForm } from '@/features/inventario/components/MovimientoForm'
 import { MovimientosTable } from '@/features/inventario/components/MovimientosTable'
@@ -135,6 +136,7 @@ export function InventarioPage() {
               Limpiar filtros
             </Button>
           )}
+          <SucursalActivaSelector />
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>

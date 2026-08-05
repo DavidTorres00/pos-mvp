@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.models.producto import Producto
 from app.models.subcategoria import Subcategoria
-from app.repositories import categoria_repository, producto_repository, subcategoria_repository
+from app.repositories import categoria_repository, producto_repository, stock_sucursal_repository, subcategoria_repository
+from app.schemas.producto import ProductoOut, ProductoStockOut
 from app.services import auditoria_service
 
 
@@ -52,15 +53,23 @@ def _generar_sku(db: Session, subcategoria: Subcategoria) -> str:
     return f"{prefijo}{max_secuencial + 1:02d}"
 
 
-def listar(db: Session, q: str | None, page: int, size: int) -> tuple[list[Producto], int]:
-    return producto_repository.get_all(db, q, page, size)
+def _a_stock_out(producto: Producto, stock: int) -> ProductoStockOut:
+    return ProductoStockOut(**ProductoOut.model_validate(producto).model_dump(), stock=stock)
 
 
-def obtener(db: Session, producto_id: int) -> Producto:
+def listar(db: Session, q: str | None, sucursal_id: int, page: int, size: int) -> tuple[list[ProductoStockOut], int]:
+    productos, total = producto_repository.get_all(db, q, page, size)
+    cantidades = stock_sucursal_repository.get_cantidades(db, [p.id for p in productos], sucursal_id)
+    items = [_a_stock_out(p, cantidades.get(p.id, 0)) for p in productos]
+    return items, total
+
+
+def obtener(db: Session, producto_id: int, sucursal_id: int) -> ProductoStockOut:
     producto = producto_repository.get_by_id(db, producto_id)
     if producto is None:
         raise ProductoNoEncontradoError(producto_id)
-    return producto
+    cantidad = stock_sucursal_repository.get_cantidades(db, [producto.id], sucursal_id).get(producto.id, 0)
+    return _a_stock_out(producto, cantidad)
 
 
 def crear(

@@ -11,6 +11,7 @@ import {
   ReceiptIcon,
   RepeatIcon,
   SettingsIcon,
+  Building2Icon,
   ShoppingCartIcon,
   StoreIcon,
   TagIcon,
@@ -23,7 +24,10 @@ import { Navigate, NavLink, Outlet } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/DataStates'
 import { cn } from '@/lib/utils'
+import { AbrirCajaSplash } from '@/features/caja/components/AbrirCajaSplash'
+import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
 import { useLogout } from '@/features/auth/hooks/useLogout'
+import { getApiErrorMessage } from '@/lib/apiError'
 import { useAuthStore } from '@/stores/authStore'
 
 interface NavItem {
@@ -31,6 +35,7 @@ interface NavItem {
   label: string
   icon: typeof LayoutDashboardIcon
   adminOnly: boolean
+  cajeroOnly?: boolean
   end?: boolean
 }
 
@@ -55,7 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Operación',
     links: [
-      { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false },
+      { to: '/caja', label: 'Caja', icon: PiggyBankIcon, adminOnly: false, cajeroOnly: true },
       { to: '/ventas', label: 'Ventas', icon: ReceiptIcon, adminOnly: false },
     ],
   },
@@ -74,6 +79,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/reportes', label: 'Reportes', icon: BarChart3Icon, adminOnly: true },
       { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon, adminOnly: true },
       { to: '/usuarios', label: 'Usuarios', icon: UsersIcon, adminOnly: true },
+      { to: '/sucursales', label: 'Sucursales', icon: Building2Icon, adminOnly: true },
       { to: '/configuracion', label: 'Configuración', icon: SettingsIcon, adminOnly: true },
     ],
   },
@@ -92,15 +98,35 @@ export function ProtectedLayout() {
   const usuario = useAuthStore((state) => state.usuario)
   const logout = useLogout()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const esCajero = usuario?.role === 'cajero'
+  const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(esCajero)
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
+  // el cajero no ve nada de la app (sidebar, nav, otras páginas) hasta que exista una caja
+  // abierta: sin caja no hay nada que hacer, y esto evita que se distraiga navegando antes
+  // de contar/registrar su monto inicial
+  if (esCajero && isLoadingCaja) {
+    return <LoadingState />
+  }
+  if (esCajero && !cajaActual?.caja) {
+    return (
+      <AbrirCajaSplash
+        nombre={usuario?.nombre ?? ''}
+        limiteEfectivo={cajaActual?.limite_efectivo ?? null}
+        ultimoCierre={cajaActual?.ultimo_cierre ?? null}
+      />
+    )
+  }
+
+  const logoutError = logout.isError ? getApiErrorMessage(logout.error, 'No se pudo cerrar sesión') : undefined
+
   const isAdmin = usuario?.role === 'admin'
   const navGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    links: group.links.filter((link) => !link.adminOnly || isAdmin),
+    links: group.links.filter((link) => (!link.adminOnly || isAdmin) && (!link.cajeroOnly || !isAdmin)),
   })).filter((group) => group.links.length > 0)
 
   return (
@@ -134,6 +160,7 @@ export function ProtectedLayout() {
           <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
             Cerrar sesión
           </Button>
+          {logoutError && <p className="px-1 text-xs text-destructive">{logoutError}</p>}
         </div>
       </aside>
 
@@ -160,6 +187,8 @@ export function ProtectedLayout() {
               </Button>
             </div>
           </div>
+
+          {logoutError && <p className="px-4 pb-2 text-xs text-destructive">{logoutError}</p>}
 
           {mobileMenuOpen && (
             <nav

@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
 import { ReglaReordenForm } from '@/features/reglas-reorden/components/ReglaReordenForm'
 import { ReglasReordenTable } from '@/features/reglas-reorden/components/ReglasReordenTable'
@@ -75,21 +76,26 @@ export function ReglasReordenPage() {
             Al llegar al umbral de stock, se sugiere automáticamente una orden de compra.
           </p>
         </div>
-        <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>Nueva regla</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nueva regla de reorden</DialogTitle>
-            </DialogHeader>
-            <ReglaReordenForm
-              isPending={create.isPending}
-              errorMessage={create.isError ? getApiErrorMessage(create.error, 'No se pudo crear la regla') : undefined}
-              onSubmit={handleCreate}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-3">
+          <SucursalActivaSelector />
+          <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>Nueva regla</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Nueva regla de reorden</DialogTitle>
+              </DialogHeader>
+              <ReglaReordenForm
+                isPending={create.isPending}
+                errorMessage={
+                  create.isError ? getApiErrorMessage(create.error, 'No se pudo crear la regla') : undefined
+                }
+                onSubmit={handleCreate}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <TableCard

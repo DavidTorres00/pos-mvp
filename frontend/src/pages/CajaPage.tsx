@@ -1,24 +1,19 @@
 import { useState } from 'react'
 import { AlertTriangleIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ErrorState, LoadingState } from '@/components/DataStates'
 import { TableCard } from '@/components/TableCard'
-import { AperturaCajaForm } from '@/features/caja/components/AperturaCajaForm'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
 import { MovimientoCajaForm } from '@/features/caja/components/MovimientoCajaForm'
 import { MovimientosCajaTable } from '@/features/caja/components/MovimientosCajaTable'
 import { VoucherRetiroDialog } from '@/features/caja/components/VoucherRetiroDialog'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
-import {
-  useAbrirCaja,
-  useCerrarCaja,
-  useCrearMovimientoCaja,
-  useRetirarExcedenteCaja,
-} from '@/features/caja/hooks/useCajaMutations'
+import { useCerrarCaja, useCrearMovimientoCaja, useRetirarExcedenteCaja } from '@/features/caja/hooks/useCajaMutations'
 import { useCajaMovimientos, useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
-import type { AperturaFormValues, CierreFormValues, MovimientoCajaFormValues } from '@/features/caja/schemas/cajaSchema'
+import type { CierreFormValues, MovimientoCajaFormValues } from '@/features/caja/schemas/cajaSchema'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
@@ -40,13 +35,30 @@ export function CajaPage() {
   const movimientos = movimientosData?.items ?? []
   const total = movimientosData?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / size))
-  const abrir = useAbrirCaja()
   const cerrar = useCerrarCaja()
   const crearMovimiento = useCrearMovimientoCaja()
   const retirarExcedente = useRetirarExcedenteCaja()
   const [movimientoOpen, setMovimientoOpen] = useState(false)
   const [cierreOpen, setCierreOpen] = useState(false)
   const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
+
+  // apertura/operación diaria de caja es responsabilidad fija del cajero (ver AbrirCajaSplash);
+  // el único caso real del admin acá es el corte de emergencia, y eso ya vive en Usuarios
+  if (usuario?.role === 'admin') {
+    return (
+      <div className="flex max-w-2xl flex-col gap-4 p-6">
+        <h1 className="text-xl font-semibold tracking-tight">Caja</h1>
+        <p className="rounded-md border p-3 text-sm text-muted-foreground">
+          La apertura y operación de caja es responsabilidad del cajero. Si necesitas cerrar la caja de alguien que
+          no puede hacerlo, hazlo desde{' '}
+          <Link to="/usuarios" className="underline">
+            Usuarios
+          </Link>
+          .
+        </p>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return <LoadingState />
@@ -56,26 +68,18 @@ export function CajaPage() {
     return <ErrorState />
   }
 
+  // un cajero siempre llega aquí con caja abierta: AbrirCajaSplash se lo exige antes de dejarlo
+  // pasar, y el caso admin ya se descartó arriba — caja nunca es null en este punto
   if (!caja) {
-    return (
-      <div className="flex max-w-sm flex-col gap-4 p-6">
-        <h1 className="text-xl font-semibold tracking-tight">Abrir caja</h1>
-        <AperturaCajaForm
-          isPending={abrir.isPending}
-          errorMessage={abrir.isError ? getApiErrorMessage(abrir.error, 'No se pudo abrir la caja') : undefined}
-          onSubmit={(values: AperturaFormValues) => {
-            if (abrir.isPending) return
-            abrir.mutate(values.monto_inicial)
-          }}
-        />
-      </div>
-    )
+    return null
   }
 
   return (
     <div className="flex w-full flex-col gap-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold tracking-tight">Caja abierta desde {formatDateTime(caja.fecha_apertura)}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">
+          Caja abierta por {caja.usuario_nombre} desde {formatDateTime(caja.fecha_apertura)}
+        </h1>
         <div className="flex gap-2">
           <Dialog open={movimientoOpen} onOpenChange={setMovimientoOpen}>
             <DialogTrigger asChild>

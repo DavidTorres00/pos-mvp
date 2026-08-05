@@ -36,3 +36,14 @@ def require_role(*roles: RolUsuario) -> Callable[[Usuario], Usuario]:
         return usuario
 
     return dependency
+
+
+def resolve_sucursal_id(sucursal_id: int | None = None, usuario: Usuario = Depends(get_current_user)) -> int:
+    """Sucursal efectiva para pantallas que muestran/mutan stock (Productos, Inventario, Compras,
+    Reglas/Órdenes de reorden). El cajero siempre usa la suya propia (ignora cualquier valor
+    recibido); el admin no pertenece a ninguna, así que debe pasarla explícitamente."""
+    if usuario.sucursal_id is not None:
+        return usuario.sucursal_id
+    if sucursal_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selecciona una sucursal")
+    return sucursal_id

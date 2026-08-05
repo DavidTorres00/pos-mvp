@@ -8,6 +8,6 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: logout,
-    onSettled: () => clearSession(),
+    onSuccess: () => clearSession(),
   })
 }

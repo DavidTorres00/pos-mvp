@@ -5,8 +5,8 @@ from app.models.compra import Compra
 from app.repositories.pagination import paginar
 
 
-def get_all(db: Session, page: int, size: int) -> tuple[list[Compra], int]:
-    stmt = select(Compra).order_by(Compra.created_at.desc())
+def get_all(db: Session, sucursal_id: int, page: int, size: int) -> tuple[list[Compra], int]:
+    stmt = select(Compra).where(Compra.sucursal_id == sucursal_id).order_by(Compra.created_at.desc())
     return paginar(db, stmt, page, size)
 
 

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_role
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
-from app.models.usuario import Usuario
+from app.models.usuario import RolUsuario, Usuario
+from app.repositories import equipo_repository
 from app.schemas.caja import (
     CajaAbrirRequest,
     CajaActualOut,
@@ -15,12 +16,16 @@ from app.schemas.caja import (
     MovimientoCajaOut,
     VoucherRetiroOut,
 )
+from app.schemas.equipo import EquipoOut
 from app.schemas.pagination import Pagina
 from app.services import caja_service
 from app.services.caja_service import (
     CajaNoAbiertaError,
-    CajaNoEncontradaError,
     CajaYaAbiertaError,
+    CajaNoEncontradaError,
+    EquipoNoDisponibleError,
+    EquipoOcupadoError,
+    MontoInicialExcedeLimiteError,
     PermisoRetiroExcedenteError,
     SinExcedenteError,
 )
@@ -29,18 +34,38 @@ router = APIRouter(prefix="/caja", tags=["caja"], dependencies=[Depends(get_curr
 
 
 @router.get("/actual", response_model=CajaActualOut)
-def actual(db: Session = Depends(get_db)) -> CajaActualOut:
-    return caja_service.obtener_actual(db)
+def actual(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> CajaActualOut:
+    return caja_service.obtener_actual(db, usuario.id)
+
+
+@router.get("/equipos-disponibles", response_model=list[EquipoOut])
+def equipos_disponibles(
+    db: Session = Depends(get_db), usuario: Usuario = Depends(require_role(RolUsuario.CAJERO))
+) -> list[EquipoOut]:
+    # forzado a rol cajero en la ruta (no solo confiado a que "nunca" lo llame un admin, ver
+    # abrir()): garantiza que usuario.sucursal_id no sea None (CHECK a nivel de base de datos)
+    return equipo_repository.get_activos_by_sucursal(db, usuario.sucursal_id)
 
 
 @router.post("/abrir", response_model=CajaOut, status_code=status.HTTP_201_CREATED)
 def abrir(
-    payload: CajaAbrirRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+    payload: CajaAbrirRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.CAJERO)),
 ) -> CajaOut:
     try:
-        return caja_service.abrir(db, usuario.id, payload.monto_inicial)
+        return caja_service.abrir(db, usuario.id, payload.equipo_id, payload.monto_inicial)
     except CajaYaAbiertaError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya hay una caja abierta")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya tienes una caja abierta")
+    except EquipoNoDisponibleError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ese equipo no está disponible")
+    except EquipoOcupadoError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ese equipo ya está en uso")
+    except MontoInicialExcedeLimiteError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"El monto inicial (${e.monto_inicial}) supera el límite de efectivo configurado (${e.limite}).",
+        )
 
 
 @router.post("/cerrar", response_model=CajaResumenOut)
@@ -48,7 +73,7 @@ def cerrar(
     payload: CajaCerrarRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
 ) -> CajaResumenOut:
     try:
-        return caja_service.cerrar(db, usuario.id, payload.monto_final)
+        return caja_service.cerrar(db, usuario.id, usuario.id, payload.monto_final)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
 

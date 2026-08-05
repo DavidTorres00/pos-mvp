@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.models.detalle_venta import DetalleVenta
 from app.models.movimiento_inventario import TipoMovimiento
+from app.models.usuario import Usuario
 from app.models.venta import FormaPago, Venta
-from app.repositories import producto_repository, venta_repository
+from app.repositories import producto_repository, stock_sucursal_repository, venta_repository
 from app.schemas.venta import VentaItemCreate
 from app.services import auditoria_service, caja_service, inventario_service
 
@@ -38,21 +39,24 @@ def obtener(db: Session, venta_id: int) -> Venta:
     return venta
 
 
-def crear(db: Session, usuario_id: int, items: list[VentaItemCreate], forma_pago: FormaPago) -> Venta:
-    caja = caja_service.obtener_abierta(db)
+def crear(db: Session, usuario: Usuario, items: list[VentaItemCreate], forma_pago: FormaPago) -> Venta:
+    usuario_id = usuario.id
+    caja = caja_service.obtener_abierta(db, usuario_id)
     if caja is None:
         raise CajaNoAbiertaError()
+    sucursal_id = usuario.sucursal_id
 
     cantidad_solicitada: dict[int, int] = {}
     for item in items:
         cantidad_solicitada[item.producto_id] = cantidad_solicitada.get(item.producto_id, 0) + item.cantidad
 
+    cantidades_stock = stock_sucursal_repository.get_cantidades(db, list(cantidad_solicitada.keys()), sucursal_id)
     productos = {}
     for producto_id, cantidad_total in cantidad_solicitada.items():
         producto = producto_repository.get_by_id(db, producto_id)
         if producto is None or not producto.activo:
             raise ProductoInvalidoError(producto_id)
-        if producto.stock < cantidad_total:
+        if cantidades_stock.get(producto_id, 0) < cantidad_total:
             raise StockInsuficienteError(producto_id)
         productos[producto_id] = producto
 
@@ -73,7 +77,13 @@ def crear(db: Session, usuario_id: int, items: list[VentaItemCreate], forma_pago
 
     for item in items:
         inventario_service.registrar_movimiento(
-            db, usuario_id, item.producto_id, TipoMovimiento.SALIDA, item.cantidad, motivo=f"Venta #{venta.id}"
+            db,
+            usuario_id,
+            item.producto_id,
+            sucursal_id,
+            TipoMovimiento.SALIDA,
+            item.cantidad,
+            motivo=f"Venta #{venta.id}",
         )
 
     auditoria_service.registrar(

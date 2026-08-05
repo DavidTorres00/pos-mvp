@@ -12,7 +12,7 @@ export function useCrearVenta() {
       ['caja-actual'],
       ['caja-resumen'],
       ['reporte-ventas-dia'],
-      ['reporte-caja'],
+      ['cajas-abiertas'],
     ],
   )
 }

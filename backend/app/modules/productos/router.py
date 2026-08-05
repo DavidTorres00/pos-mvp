@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, require_role, resolve_sucursal_id
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.pagination import Pagina
-from app.schemas.producto import ProductoCreate, ProductoEstado, ProductoOut, ProductoUpdate
+from app.schemas.producto import ProductoCreate, ProductoEstado, ProductoOut, ProductoStockOut, ProductoUpdate
 from app.services import producto_service
 from app.services.producto_service import (
     CategoriaInvalidaError,
@@ -20,13 +20,14 @@ router = APIRouter(prefix="/productos", tags=["productos"], dependencies=[Depend
 solo_admin = Depends(require_role(RolUsuario.ADMIN))
 
 
-@router.get("", response_model=Pagina[ProductoOut])
+@router.get("", response_model=Pagina[ProductoStockOut])
 def listar(
     q: str | None = None,
+    sucursal_id: int = Depends(resolve_sucursal_id),
     paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
     db: Session = Depends(get_db),
-) -> Pagina[ProductoOut]:
-    items, total = producto_service.listar(db, q, paginacion.page, paginacion.size)
+) -> Pagina[ProductoStockOut]:
+    items, total = producto_service.listar(db, q, sucursal_id, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
@@ -52,10 +53,12 @@ def crear(payload: ProductoCreate, db: Session = Depends(get_db), usuario: Usuar
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La subcategoría no existe")
 
 
-@router.get("/{producto_id}", response_model=ProductoOut)
-def obtener(producto_id: int, db: Session = Depends(get_db)) -> ProductoOut:
+@router.get("/{producto_id}", response_model=ProductoStockOut)
+def obtener(
+    producto_id: int, db: Session = Depends(get_db), sucursal_id: int = Depends(resolve_sucursal_id)
+) -> ProductoStockOut:
     try:
-        return producto_service.obtener(db, producto_id)
+        return producto_service.obtener(db, producto_id, sucursal_id)
     except ProductoNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
 

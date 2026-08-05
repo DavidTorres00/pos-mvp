@@ -7,6 +7,7 @@ from app.models.movimiento_caja import TipoMovimientoCaja
 
 
 class CajaAbrirRequest(BaseModel):
+    equipo_id: int
     monto_inicial: Decimal = Field(ge=0)
 
 
@@ -37,6 +38,9 @@ class CajaOut(BaseModel):
 
     id: int
     usuario_id: int
+    usuario_nombre: str
+    equipo_id: int
+    equipo_nombre: str
     monto_inicial: Decimal
     monto_final: Decimal | None
     abierta: bool
@@ -60,6 +64,7 @@ class CajaActualOut(BaseModel):
     efectivo_actual: Decimal | None
     limite_efectivo: Decimal | None
     excede_limite: bool
+    ultimo_cierre: datetime | None
 
 
 class VoucherRetiroOut(BaseModel):

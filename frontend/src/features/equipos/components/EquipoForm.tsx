@@ -3,30 +3,25 @@ import { useForm } from 'react-hook-form'
 
 import { Button } from '@/components/ui/button'
 import { FormField } from '@/components/form/FormField'
-import { aperturaSchema, type AperturaFormValues } from '@/features/caja/schemas/cajaSchema'
+import { equipoSchema, type EquipoFormValues } from '@/features/equipos/schemas/equipoSchema'
 
-interface AperturaCajaFormProps {
+interface EquipoFormProps {
+  defaultValues?: EquipoFormValues
   isPending: boolean
   errorMessage?: string
-  onSubmit: (values: AperturaFormValues) => void
+  onSubmit: (values: EquipoFormValues) => void
 }
 
-export function AperturaCajaForm({ isPending, errorMessage, onSubmit }: AperturaCajaFormProps) {
+export function EquipoForm({ defaultValues, isPending, errorMessage, onSubmit }: EquipoFormProps) {
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<AperturaFormValues>({ resolver: zodResolver(aperturaSchema) })
+  } = useForm<EquipoFormValues>({ resolver: zodResolver(equipoSchema), defaultValues })
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <FormField
-        label="Monto inicial"
-        type="number"
-        step="0.01"
-        register={register('monto_inicial', { valueAsNumber: true })}
-        error={errors.monto_inicial}
-      />
+      <FormField label="Nombre" register={register('nombre')} error={errors.nombre} />
 
       {errorMessage && (
         <p role="alert" className="text-sm text-destructive">
@@ -35,7 +30,7 @@ export function AperturaCajaForm({ isPending, errorMessage, onSubmit }: Apertura
       )}
 
       <Button type="submit" disabled={isPending}>
-        {isPending ? 'Abriendo...' : 'Abrir caja'}
+        {isPending ? 'Guardando...' : 'Guardar'}
       </Button>
     </form>
   )

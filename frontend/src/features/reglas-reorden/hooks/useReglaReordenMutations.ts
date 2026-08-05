@@ -7,9 +7,14 @@ import {
   type ReglaReorden,
   type ReglaReordenPayload,
 } from '@/services/reglaReordenService'
+import { useSucursalActivaStore } from '@/stores/sucursalActivaStore'
 
 export function useCrearReglaReorden() {
-  return useApiMutation((payload: ReglaReordenPayload) => createReglaReorden(payload), [['reglas-reorden']])
+  const sucursalId = useSucursalActivaStore((state) => state.sucursalId)
+  return useApiMutation(
+    (payload: ReglaReordenPayload) => createReglaReorden(payload, sucursalId),
+    [['reglas-reorden']],
+  )
 }
 
 export function useUpdateReglaReorden() {

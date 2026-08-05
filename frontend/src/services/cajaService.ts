@@ -6,6 +6,9 @@ export type TipoMovimientoCaja = 'entrada' | 'salida'
 export interface Caja {
   id: number
   usuario_id: number
+  usuario_nombre: string
+  equipo_id: number
+  equipo_nombre: string
   monto_inicial: string
   monto_final: string | null
   abierta: boolean
@@ -28,6 +31,7 @@ export interface CajaActual {
   efectivo_actual: string | null
   limite_efectivo: string | null
   excede_limite: boolean
+  ultimo_cierre: string | null
 }
 
 export interface VoucherRetiro {
@@ -68,8 +72,8 @@ export async function retirarExcedenteCaja(): Promise<VoucherRetiro> {
   return data
 }
 
-export async function abrirCaja(monto_inicial: number): Promise<Caja> {
-  const { data } = await api.post<Caja>('/caja/abrir', { monto_inicial })
+export async function abrirCaja(equipo_id: number, monto_inicial: number): Promise<Caja> {
+  const { data } = await api.post<Caja>('/caja/abrir', { equipo_id, monto_inicial })
   return data
 }
 

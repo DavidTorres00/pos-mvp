@@ -22,8 +22,8 @@ class CompraNoEncontradaError(Exception):
     pass
 
 
-def listar(db: Session, page: int, size: int) -> tuple[list[Compra], int]:
-    return compra_repository.get_all(db, page, size)
+def listar(db: Session, sucursal_id: int, page: int, size: int) -> tuple[list[Compra], int]:
+    return compra_repository.get_all(db, sucursal_id, page, size)
 
 
 def obtener(db: Session, compra_id: int) -> Compra:
@@ -33,7 +33,9 @@ def obtener(db: Session, compra_id: int) -> Compra:
     return compra
 
 
-def crear(db: Session, usuario_id: int, proveedor_id: int, items: list[CompraItemCreate]) -> Compra:
+def crear(
+    db: Session, usuario_id: int, proveedor_id: int, sucursal_id: int, items: list[CompraItemCreate]
+) -> Compra:
     if proveedor_repository.get_by_id(db, proveedor_id) is None:
         raise ProveedorInvalidoError(proveedor_id)
     for item in items:
@@ -41,7 +43,7 @@ def crear(db: Session, usuario_id: int, proveedor_id: int, items: list[CompraIte
             raise ProductoInvalidoError(item.producto_id)
 
     total = sum((item.cantidad * item.costo_unitario for item in items), Decimal("0"))
-    compra = Compra(proveedor_id=proveedor_id, total=total, usuario_id=usuario_id)
+    compra = Compra(proveedor_id=proveedor_id, sucursal_id=sucursal_id, total=total, usuario_id=usuario_id)
     compra.items = [
         DetalleCompra(
             producto_id=item.producto_id,
@@ -55,7 +57,13 @@ def crear(db: Session, usuario_id: int, proveedor_id: int, items: list[CompraIte
 
     for item in items:
         inventario_service.registrar_movimiento(
-            db, usuario_id, item.producto_id, TipoMovimiento.ENTRADA, item.cantidad, motivo=f"Compra #{compra.id}"
+            db,
+            usuario_id,
+            item.producto_id,
+            sucursal_id,
+            TipoMovimiento.ENTRADA,
+            item.cantidad,
+            motivo=f"Compra #{compra.id}",
         )
 
     auditoria_service.registrar(

@@ -10,6 +10,7 @@ from app.repositories.pagination import paginar
 
 def get_all(
     db: Session,
+    sucursal_id: int,
     producto_id: int | None,
     q: str | None,
     tipo: TipoMovimiento | None,
@@ -18,7 +19,9 @@ def get_all(
     page: int,
     size: int,
 ) -> tuple[list[MovimientoInventario], int]:
-    stmt = select(MovimientoInventario).order_by(MovimientoInventario.created_at.desc())
+    stmt = select(MovimientoInventario).where(MovimientoInventario.sucursal_id == sucursal_id).order_by(
+        MovimientoInventario.created_at.desc()
+    )
     if producto_id is not None:
         stmt = stmt.where(MovimientoInventario.producto_id == producto_id)
     if q:

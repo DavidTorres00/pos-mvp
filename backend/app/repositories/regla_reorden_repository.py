@@ -5,8 +5,10 @@ from app.models.regla_reorden import ReglaReorden
 from app.repositories.pagination import paginar
 
 
-def get_all(db: Session, page: int, size: int) -> tuple[list[ReglaReorden], int]:
-    stmt = select(ReglaReorden).order_by(ReglaReorden.created_at.desc())
+def get_all(db: Session, sucursal_id: int, page: int, size: int) -> tuple[list[ReglaReorden], int]:
+    stmt = (
+        select(ReglaReorden).where(ReglaReorden.sucursal_id == sucursal_id).order_by(ReglaReorden.created_at.desc())
+    )
     return paginar(db, stmt, page, size)
 
 
@@ -14,8 +16,10 @@ def get_by_id(db: Session, regla_id: int) -> ReglaReorden | None:
     return db.get(ReglaReorden, regla_id)
 
 
-def get_by_producto(db: Session, producto_id: int) -> ReglaReorden | None:
-    return db.scalar(select(ReglaReorden).where(ReglaReorden.producto_id == producto_id))
+def get_by_producto(db: Session, producto_id: int, sucursal_id: int) -> ReglaReorden | None:
+    return db.scalar(
+        select(ReglaReorden).where(ReglaReorden.producto_id == producto_id, ReglaReorden.sucursal_id == sucursal_id)
+    )
 
 
 def create(db: Session, regla: ReglaReorden) -> ReglaReorden:

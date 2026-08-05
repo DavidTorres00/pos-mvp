@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.producto import ProductoOut
 from app.schemas.proveedor import ProveedorOut
+from app.schemas.sucursal import SucursalOut
 
 
 class ReglaReordenCreate(BaseModel):
@@ -32,6 +33,8 @@ class ReglaReordenOut(BaseModel):
     id: int
     producto_id: int
     producto: ProductoOut
+    sucursal_id: int
+    sucursal: SucursalOut
     proveedor_id: int
     proveedor: ProveedorOut
     umbral_stock: int

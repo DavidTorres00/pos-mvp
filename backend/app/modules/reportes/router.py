@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_role
@@ -9,7 +9,6 @@ from app.models.usuario import RolUsuario
 from app.schemas.caja import CajaResumenOut
 from app.schemas.reporte import VentasDiaOut
 from app.services import reporte_service
-from app.services.reporte_service import SinCajaError
 
 router = APIRouter(prefix="/reportes", tags=["reportes"], dependencies=[Depends(require_role(RolUsuario.ADMIN))])
 
@@ -19,9 +18,6 @@ def ventas_dia(fecha: date | None = None, db: Session = Depends(get_db)) -> Vent
     return reporte_service.ventas_del_dia(db, fecha)
 
 
-@router.get("/caja", response_model=CajaResumenOut)
-def caja(db: Session = Depends(get_db)) -> CajaResumenOut:
-    try:
-        return reporte_service.caja_actual_o_ultima(db)
-    except SinCajaError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aún no hay ninguna caja registrada")
+@router.get("/cajas-abiertas", response_model=list[CajaResumenOut])
+def cajas_abiertas(db: Session = Depends(get_db)) -> list[CajaResumenOut]:
+    return reporte_service.cajas_abiertas(db)

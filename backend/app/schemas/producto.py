@@ -27,15 +27,24 @@ class ProductoEstado(BaseModel):
 
 
 class ProductoOut(BaseModel):
+    """Catálogo puro (sin cantidad) — el stock ya no vive en Producto, es por sucursal. Usado tal
+    cual para referencias anidadas (item de compra, movimiento, regla/orden de reorden)."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     nombre: str
     sku: str
     precio_venta: Decimal
-    stock: int
     activo: bool
     categoria_id: int | None
     categoria: CategoriaOut | None
     subcategoria_id: int | None
     subcategoria: SubcategoriaOut | None
+
+
+class ProductoStockOut(ProductoOut):
+    """ProductoOut + stock de UNA sucursal específica (la resuelta por resolve_sucursal_id).
+    Solo tiene sentido en el listado/detalle de Productos, donde ese contexto existe."""
+
+    stock: int

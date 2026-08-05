@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const aperturaSchema = z.object({
+  equipo_id: z.number(),
   monto_inicial: z.number().nonnegative('El monto no puede ser negativo'),
 })
 export type AperturaFormValues = z.infer<typeof aperturaSchema>

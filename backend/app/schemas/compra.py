@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.producto import ProductoOut
 from app.schemas.proveedor import ProveedorOut
+from app.schemas.sucursal import SucursalOut
 
 
 class CompraItemCreate(BaseModel):
@@ -35,6 +36,8 @@ class CompraOut(BaseModel):
     id: int
     proveedor_id: int
     proveedor: ProveedorOut
+    sucursal_id: int
+    sucursal: SucursalOut
     total: Decimal
     usuario_id: int
     created_at: datetime

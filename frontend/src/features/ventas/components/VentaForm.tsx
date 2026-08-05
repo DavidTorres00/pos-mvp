@@ -8,7 +8,7 @@ import { useProductos } from '@/features/productos/hooks/useProductos'
 import { ventaSchema, type VentaFormValues } from '@/features/ventas/schemas/ventaSchema'
 import { formatCurrency } from '@/lib/format'
 import { sumLineTotals } from '@/lib/lineItems'
-import type { Producto } from '@/services/productoService'
+import type { ProductoConStock } from '@/services/productoService'
 
 interface VentaFormProps {
   isPending: boolean
@@ -33,7 +33,7 @@ export function VentaForm({ isPending, errorMessage, onSubmit }: VentaFormProps)
   const productos = productosData?.items ?? []
   const items = useWatch({ control, name: 'items' })
 
-  const productoPorId = (id: number | null): Producto | undefined => productos.find((p) => p.id === id)
+  const productoPorId = (id: number | null): ProductoConStock | undefined => productos.find((p) => p.id === id)
   const lineTotal = (item?: { producto_id: number | null; cantidad: number }) => {
     const producto = productoPorId(item?.producto_id ?? null)
     return producto ? Number(producto.precio_venta) * (item?.cantidad || 0) : 0

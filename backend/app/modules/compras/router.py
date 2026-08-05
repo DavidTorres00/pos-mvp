@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, require_role, resolve_sucursal_id
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
@@ -15,18 +15,23 @@ router = APIRouter(prefix="/compras", tags=["compras"], dependencies=[Depends(re
 
 @router.get("", response_model=Pagina[CompraOut])
 def listar(
-    paginacion: ParametrosPaginacion = Depends(parametros_paginacion), db: Session = Depends(get_db)
+    sucursal_id: int = Depends(resolve_sucursal_id),
+    paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
+    db: Session = Depends(get_db),
 ) -> Pagina[CompraOut]:
-    items, total = compra_service.listar(db, paginacion.page, paginacion.size)
+    items, total = compra_service.listar(db, sucursal_id, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
 @router.post("", response_model=CompraOut, status_code=status.HTTP_201_CREATED)
 def crear(
-    payload: CompraCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+    payload: CompraCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+    sucursal_id: int = Depends(resolve_sucursal_id),
 ) -> CompraOut:
     try:
-        return compra_service.crear(db, usuario.id, payload.proveedor_id, payload.items)
+        return compra_service.crear(db, usuario.id, payload.proveedor_id, sucursal_id, payload.items)
     except ProductoInvalidoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uno de los productos no existe")
     except ProveedorInvalidoError:
