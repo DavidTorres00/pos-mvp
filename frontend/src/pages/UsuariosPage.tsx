@@ -59,7 +59,7 @@ export function UsuariosPage() {
 
   function handleCerrarCaja(values: CierreFormValues) {
     if (cerrar.isPending || !cerrandoCajaDe) return
-    cerrar.mutate({ id: cerrandoCajaDe.id, monto_final: values.monto_final }, { onSuccess: () => setCerrandoCajaDe(null) })
+    cerrar.mutate({ id: cerrandoCajaDe.id, ...values }, { onSuccess: () => setCerrandoCajaDe(null) })
   }
 
   function handleRetirarExcedente() {

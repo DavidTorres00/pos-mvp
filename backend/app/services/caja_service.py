@@ -48,6 +48,10 @@ class EquipoOcupadoError(Exception):
     pass
 
 
+class MotivoDiferenciaRequeridoError(Exception):
+    pass
+
+
 def obtener_abierta(db: Session, usuario_id: int) -> CajaSesion | None:
     return caja_repository.get_abierta_by_usuario(db, usuario_id)
 
@@ -84,25 +88,6 @@ def abrir(db: Session, usuario_id: int, equipo_id: int, monto_inicial: Decimal) 
         db, usuario_id, "caja_abierta", "caja_sesion", caja.id, {"monto_inicial": str(monto_inicial)}
     )
     return caja
-
-
-def registrar_movimiento(
-    db: Session, usuario_id: int, tipo: TipoMovimientoCaja, monto: Decimal, motivo: str | None
-) -> MovimientoCaja:
-    caja = caja_repository.get_abierta_by_usuario(db, usuario_id)
-    if caja is None:
-        raise CajaNoAbiertaError()
-    movimiento = MovimientoCaja(caja_id=caja.id, usuario_id=usuario_id, tipo=tipo, monto=monto, motivo=motivo)
-    movimiento = caja_repository.crear_movimiento(db, movimiento)
-    auditoria_service.registrar(
-        db,
-        usuario_id,
-        f"caja_movimiento_{tipo.value}",
-        "movimiento_caja",
-        movimiento.id,
-        {"monto": str(monto), "motivo": motivo},
-    )
-    return movimiento
 
 
 def _resumen_desde(caja: CajaSesion, movimientos: list[MovimientoCaja], ventas: list[Venta]) -> CajaResumenOut:
@@ -262,13 +247,23 @@ def resumen(db: Session, caja_id: int) -> CajaResumenOut:
     return _calcular_resumen(db, caja)
 
 
-def cerrar(db: Session, actor_id: int, target_usuario_id: int, monto_final: Decimal) -> CajaResumenOut:
+def cerrar(
+    db: Session, actor_id: int, target_usuario_id: int, monto_final: Decimal, motivo_diferencia: str | None = None
+) -> CajaResumenOut:
     """Cierra la caja de target_usuario_id, auditando el evento con actor_id. Cubre dos casos:
     un cajero cerrando la suya (actor_id == target_usuario_id) o un admin cerrando la de otro
     cajero (corte de emergencia, actor_id = admin, target_usuario_id = el cajero)."""
     caja = caja_repository.get_abierta_by_usuario(db, target_usuario_id)
     if caja is None:
         raise CajaNoAbiertaError()
+    # el esperado se calcula ANTES de tocar la caja (monto_final aún None en este punto) para
+    # poder validar el faltante antes de comprometer el cierre — si se exigiera el motivo
+    # después de guardar, ya no habría forma limpia de rechazar el cierre
+    monto_esperado = _calcular_resumen(db, caja).monto_esperado
+    diferencia = monto_final - monto_esperado
+    if diferencia < 0 and not (motivo_diferencia and motivo_diferencia.strip()):
+        raise MotivoDiferenciaRequeridoError()
+
     caja.monto_final = monto_final
     caja.abierta = False
     caja.fecha_cierre = datetime.now(timezone.utc)
@@ -280,6 +275,10 @@ def cerrar(db: Session, actor_id: int, target_usuario_id: int, monto_final: Deci
         "caja_cerrada",
         "caja_sesion",
         caja.id,
-        {"monto_final": str(monto_final), "diferencia": str(resumen.diferencia) if resumen.diferencia is not None else None},
+        {
+            "monto_final": str(monto_final),
+            "diferencia": str(resumen.diferencia) if resumen.diferencia is not None else None,
+            "motivo_diferencia": motivo_diferencia,
+        },
     )
     return resumen

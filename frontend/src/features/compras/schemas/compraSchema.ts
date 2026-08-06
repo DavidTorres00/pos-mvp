@@ -7,8 +7,8 @@ export const compraSchema = z
       .array(
         z.object({
           producto_id: z.number().nullable(),
-          cantidad: z.number().int().positive('Cantidad debe ser mayor a 0'),
-          costo_unitario: z.number().positive('Costo debe ser mayor a 0'),
+          cantidad: z.number({ error: 'Ingresa la cantidad' }).int('La cantidad debe ser un número entero').positive('Cantidad debe ser mayor a 0'),
+          costo_unitario: z.number({ error: 'Ingresa el costo unitario' }).positive('Costo debe ser mayor a 0'),
         }),
       )
       .min(1, 'Agrega al menos un producto'),

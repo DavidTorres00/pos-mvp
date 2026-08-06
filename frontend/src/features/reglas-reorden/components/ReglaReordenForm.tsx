@@ -10,6 +10,7 @@ import {
   reglaReordenSchema,
   type ReglaReordenFormValues,
 } from '@/features/reglas-reorden/schemas/reglaReordenSchema'
+import { numeroDesdeTexto } from '@/lib/numericInput'
 
 interface ReglaReordenFormProps {
   defaultValues?: ReglaReordenFormValues
@@ -74,20 +75,19 @@ export function ReglaReordenForm({
       <FormField
         label="Umbral de stock (dispara la orden al llegar aquí)"
         type="number"
-        register={register('umbral_stock', { valueAsNumber: true })}
+        register={register('umbral_stock', { setValueAs: numeroDesdeTexto })}
         error={errors.umbral_stock}
       />
       <FormField
         label="Cantidad a pedir"
         type="number"
-        register={register('cantidad_pedido', { valueAsNumber: true })}
+        register={register('cantidad_pedido', { setValueAs: numeroDesdeTexto })}
         error={errors.cantidad_pedido}
       />
       <FormField
         label="Costo unitario estimado"
         type="number"
-        step="0.01"
-        register={register('costo_unitario_estimado', { valueAsNumber: true })}
+        register={register('costo_unitario_estimado', { setValueAs: numeroDesdeTexto })}
         error={errors.costo_unitario_estimado}
       />
 

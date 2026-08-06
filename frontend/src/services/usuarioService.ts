@@ -46,8 +46,12 @@ export async function getCajaDeUsuario(id: number): Promise<CajaActual> {
   return data
 }
 
-export async function cerrarCajaDeUsuario(id: number, monto_final: number): Promise<CajaResumen> {
-  const { data } = await api.post<CajaResumen>(`/usuarios/${id}/caja/cerrar`, { monto_final })
+export async function cerrarCajaDeUsuario(
+  id: number,
+  monto_final: number,
+  motivo_diferencia?: string | null,
+): Promise<CajaResumen> {
+  const { data } = await api.post<CajaResumen>(`/usuarios/${id}/caja/cerrar`, { monto_final, motivo_diferencia })
   return data
 }
 

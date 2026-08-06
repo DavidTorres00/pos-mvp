@@ -58,10 +58,20 @@ function SheetContent({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> &
   VariantProps<typeof sheetVariants> & { showCloseButton?: boolean; container?: HTMLElement | null }) {
+  // Con `container` (portado dentro de un elemento propio en vez de document.body), `fixed`
+  // se posiciona contra el viewport igual, ignorando ese contenedor. `absolute` sí respeta un
+  // ancestro `position: relative` (el contenedor pasa a serlo desde el layout que lo expone) —
+  // no requiere ningún truco de `transform` sobre ese ancestro para funcionar como containing
+  // block, y evita el artefacto visual de composición GPU que ese truco causaba.
+  const enContenedorPropio = Boolean(container)
   return (
     <SheetPortal container={container}>
-      <SheetOverlay />
-      <SheetPrimitive.Content data-slot="sheet-content" className={cn(sheetVariants({ side }), className)} {...props}>
+      <SheetOverlay className={enContenedorPropio ? "absolute" : undefined} />
+      <SheetPrimitive.Content
+        data-slot="sheet-content"
+        className={cn(sheetVariants({ side }), enContenedorPropio && "absolute", className)}
+        {...props}
+      >
         {children}
         {showCloseButton && (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>

@@ -5,11 +5,13 @@ from app.models.producto import Producto
 from app.repositories.pagination import paginar
 
 
-def get_all(db: Session, q: str | None, page: int, size: int) -> tuple[list[Producto], int]:
+def get_all(db: Session, q: str | None, activo: bool | None, page: int, size: int) -> tuple[list[Producto], int]:
     stmt = select(Producto).order_by(Producto.nombre)
     if q:
         pattern = f"%{q}%"
         stmt = stmt.where(or_(Producto.nombre.ilike(pattern), Producto.sku.ilike(pattern)))
+    if activo is not None:
+        stmt = stmt.where(Producto.activo == activo)
     return paginar(db, stmt, page, size)
 
 

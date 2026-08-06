@@ -23,11 +23,12 @@ solo_admin = Depends(require_role(RolUsuario.ADMIN))
 @router.get("", response_model=Pagina[ProductoStockOut])
 def listar(
     q: str | None = None,
+    activo: bool | None = None,
     sucursal_id: int = Depends(resolve_sucursal_id),
     paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
     db: Session = Depends(get_db),
 ) -> Pagina[ProductoStockOut]:
-    items, total = producto_service.listar(db, q, sucursal_id, paginacion.page, paginacion.size)
+    items, total = producto_service.listar(db, q, activo, sucursal_id, paginacion.page, paginacion.size)
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 

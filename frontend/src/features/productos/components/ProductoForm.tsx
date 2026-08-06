@@ -8,6 +8,7 @@ import { SelectField } from '@/components/form/SelectField'
 import { useCategorias } from '@/features/categorias/hooks/useCategorias'
 import { productoSchema, type ProductoFormValues } from '@/features/productos/schemas/productoSchema'
 import { useSubcategorias } from '@/features/subcategorias/hooks/useSubcategorias'
+import { numeroDesdeTexto } from '@/lib/numericInput'
 
 const SIN_CATEGORIA = 'sin-categoria'
 const SIN_SUBCATEGORIA = 'sin-subcategoria'
@@ -89,8 +90,7 @@ export function ProductoForm({ defaultValues, isPending, errorMessage, onSubmit 
       <FormField
         label="Precio de venta"
         type="number"
-        step="0.01"
-        register={register('precio_venta', { valueAsNumber: true })}
+        register={register('precio_venta', { setValueAs: numeroDesdeTexto })}
         error={errors.precio_venta}
       />
 

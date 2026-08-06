@@ -57,8 +57,10 @@ def _a_stock_out(producto: Producto, stock: int) -> ProductoStockOut:
     return ProductoStockOut(**ProductoOut.model_validate(producto).model_dump(), stock=stock)
 
 
-def listar(db: Session, q: str | None, sucursal_id: int, page: int, size: int) -> tuple[list[ProductoStockOut], int]:
-    productos, total = producto_repository.get_all(db, q, page, size)
+def listar(
+    db: Session, q: str | None, activo: bool | None, sucursal_id: int, page: int, size: int
+) -> tuple[list[ProductoStockOut], int]:
+    productos, total = producto_repository.get_all(db, q, activo, page, size)
     cantidades = stock_sucursal_repository.get_cantidades(db, [p.id for p in productos], sucursal_id)
     items = [_a_stock_out(p, cantidades.get(p.id, 0)) for p in productos]
     return items, total

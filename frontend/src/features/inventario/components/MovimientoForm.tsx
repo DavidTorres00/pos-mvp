@@ -6,6 +6,7 @@ import { FormField } from '@/components/form/FormField'
 import { SelectField } from '@/components/form/SelectField'
 import { useProductos } from '@/features/productos/hooks/useProductos'
 import { movimientoSchema, type MovimientoFormValues } from '@/features/inventario/schemas/movimientoSchema'
+import { numeroDesdeTexto } from '@/lib/numericInput'
 
 interface MovimientoFormProps {
   isPending: boolean
@@ -56,8 +57,7 @@ export function MovimientoForm({ isPending, errorMessage, onSubmit }: Movimiento
       <FormField
         label="Cantidad"
         type="number"
-        step="1"
-        register={register('cantidad', { valueAsNumber: true })}
+        register={register('cantidad', { setValueAs: numeroDesdeTexto })}
         error={errors.cantidad}
       />
 

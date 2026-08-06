@@ -1,6 +1,5 @@
 import { useApiMutation } from '@/lib/hooks/useApiMutation'
-import { abrirCaja, cerrarCaja, crearMovimientoCaja, retirarExcedenteCaja } from '@/services/cajaService'
-import type { MovimientoCajaPayload } from '@/services/cajaService'
+import { abrirCaja, cerrarCaja, retirarExcedenteCaja } from '@/services/cajaService'
 
 export function useAbrirCaja() {
   return useApiMutation(
@@ -10,23 +9,16 @@ export function useAbrirCaja() {
 }
 
 export function useCerrarCaja() {
-  return useApiMutation((monto_final: number) => cerrarCaja(monto_final), [
-    ['caja-actual'],
-    ['cajas-abiertas'],
-    ['usuarios'],
-  ])
-}
-
-export function useCrearMovimientoCaja() {
   return useApiMutation(
-    (payload: MovimientoCajaPayload) => crearMovimientoCaja(payload),
-    [['caja-actual'], ['caja-movimientos'], ['caja-resumen'], ['cajas-abiertas']],
+    ({ monto_final, motivo_diferencia }: { monto_final: number; motivo_diferencia?: string | null }) =>
+      cerrarCaja(monto_final, motivo_diferencia),
+    [['caja-actual'], ['cajas-abiertas'], ['usuarios']],
   )
 }
 
 export function useRetirarExcedenteCaja() {
   return useApiMutation(
     () => retirarExcedenteCaja(),
-    [['caja-actual'], ['caja-movimientos'], ['caja-resumen'], ['cajas-abiertas'], ['auditoria']],
+    [['caja-actual'], ['caja-resumen'], ['cajas-abiertas'], ['auditoria']],
   )
 }

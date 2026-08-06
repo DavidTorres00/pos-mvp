@@ -1,11 +1,13 @@
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import {
   BarChart3Icon,
   BoxesIcon,
   ClipboardCheckIcon,
   ClipboardListIcon,
   LayoutDashboardIcon,
+  Maximize2Icon,
   MenuIcon,
+  Minimize2Icon,
   PackageIcon,
   ReceiptIcon,
   RepeatIcon,
@@ -24,13 +26,14 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { LoadingState } from '@/components/DataStates'
 import { cn } from '@/lib/utils'
-import { ProductosPage } from '@/app/lazyPages'
 import { AbrirCajaSplash } from '@/features/caja/components/AbrirCajaSplash'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
 import { useLogout } from '@/features/auth/hooks/useLogout'
 import { useMe } from '@/features/auth/hooks/useMe'
+import { ProductoPickerPanel } from '@/features/ventas/components/ProductoPickerPanel'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatTime } from '@/lib/format'
+import type { ProductoConStock } from '@/services/productoService'
 import { useAuthStore } from '@/stores/authStore'
 
 interface NavItem {
@@ -110,11 +113,40 @@ export function ProtectedLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [productosOpen, setProductosOpen] = useState(false)
   // contenedor real del <main> del cajero: los paneles/pantallas (Sheet) se portan aquí en vez
-  // de document.body para que el appbar quede siempre visible y usable por encima — un
-  // callback ref (no un ref object) porque necesitamos re-renderizar en cuanto el nodo exista
+  // de document.body para que el appbar quede siempre visible y usable por encima (Sheet los
+  // posiciona `absolute` contra este `relative`, ver components/ui/sheet.tsx) — un callback ref
+  // (no un ref object) porque necesitamos re-renderizar en cuanto el nodo exista
   const [mainEl, setMainEl] = useState<HTMLElement | null>(null)
+  // el picker de Productos vive aquí (fuera del <Outlet>, junto a su botón en el header), pero
+  // "agregar a la venta" es lógica de VentaKiosco — esta ref la deja registrar su propia función
+  // sin tener que levantar el estado de la venta hasta este layout
+  const agregarProductoRef = useRef<(producto: ProductoConStock) => void>(() => {})
+  // tras "Terminar turno", VentaKiosco muestra el resultado del cierre (cuadró o no) y espera a
+  // que el cajero confirme "Salir" antes de desloguear — mientras tanto la caja ya está cerrada
+  // en el servidor, así que `cajaActual.caja` puede llegar a null (por invalidación o por el
+  // polling de abajo) antes de ese clic. Sin esta ref, este layout lo tomaría como "sin caja
+  // abierta" y reemplazaría a VentaKiosco por `AbrirCajaSplash` a medio leer el resumen.
+  const terminandoTurnoRef = useRef(false)
+  const [pantallaCompleta, setPantallaCompleta] = useState(() => document.fullscreenElement !== null)
   const esCajero = usuario?.role === 'cajero'
   const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(esCajero)
+
+  // sincroniza el ícono con salidas de pantalla completa que no pasan por el botón (Esc, F11)
+  useEffect(() => {
+    function onFullscreenChange() {
+      setPantallaCompleta(document.fullscreenElement !== null)
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }
 
   // sin este refetch periódico, cambios que un admin hace en vivo (otorgar permiso de retiro
   // de excedente, desactivar al usuario) nunca le llegaban a una sesión ya abierta — se quedaba
@@ -134,7 +166,7 @@ export function ProtectedLayout() {
   if (esCajero && isLoadingCaja) {
     return <LoadingState />
   }
-  if (esCajero && !cajaActual?.caja) {
+  if (esCajero && !cajaActual?.caja && !terminandoTurnoRef.current) {
     return (
       <AbrirCajaSplash
         nombre={usuario?.nombre ?? ''}
@@ -206,20 +238,38 @@ export function ProtectedLayout() {
 
             <span aria-hidden className="h-4 w-px bg-primary-foreground/20" />
             <TopbarClock />
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              title={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              onClick={toggleFullscreen}
+            >
+              {pantallaCompleta ? <Minimize2Icon /> : <Maximize2Icon />}
+            </Button>
           </div>
         </header>
 
-        <main ref={setMainEl} className="relative flex flex-1 transform-gpu flex-col overflow-y-auto">
-          <Suspense fallback={<LoadingState />}>
-            <Outlet context={{ mainEl }} />
-          </Suspense>
+        {/* `main` ya no scrollea directo: es solo el contenedor `relative` (destino del portal
+            del Sheet, que se posiciona `absolute` contra él, ver comentario de `mainEl`
+            arriba). El scroll real vive en el div de adentro, separado del nodo donde se monta
+            el Sheet. */}
+        <main ref={setMainEl} className="relative flex-1 overflow-hidden">
+          <div className="flex h-full flex-col overflow-y-auto">
+            <Suspense fallback={<LoadingState />}>
+              <Outlet context={{ mainEl, agregarProductoRef, terminandoTurnoRef }} />
+            </Suspense>
+          </div>
         </main>
 
         <Sheet open={productosOpen} onOpenChange={setProductosOpen}>
-          <SheetContent side="right" container={mainEl} className="overflow-y-auto sm:max-w-2xl">
-            <Suspense fallback={<LoadingState />}>
-              <ProductosPage />
-            </Suspense>
+          <SheetContent side="right" container={mainEl} showCloseButton={false} className="overflow-y-auto sm:max-w-2xl">
+            <ProductoPickerPanel
+              onAgregar={(producto) => agregarProductoRef.current(producto)}
+              onClose={() => setProductosOpen(false)}
+            />
           </SheetContent>
         </Sheet>
       </div>

@@ -96,11 +96,11 @@ export function ReportesPage() {
                       {formatCurrency(reporteCaja.total_ventas_efectivo)}
                     </p>
                     <p className="flex justify-between tabular-nums">
-                      <span className="text-muted-foreground">Entradas manuales</span>{' '}
+                      <span className="text-muted-foreground">Otras entradas</span>{' '}
                       {formatCurrency(reporteCaja.total_entradas)}
                     </p>
                     <p className="flex justify-between tabular-nums">
-                      <span className="text-muted-foreground">Salidas manuales</span>{' '}
+                      <span className="text-muted-foreground">Otras salidas</span>{' '}
                       {formatCurrency(reporteCaja.total_salidas)}
                     </p>
                     <p className="flex justify-between border-t pt-1.5 text-base font-semibold tabular-nums text-primary">

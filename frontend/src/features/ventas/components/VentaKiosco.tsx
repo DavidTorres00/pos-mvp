@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { ArrowLeftRightIcon, HistoryIcon, PhoneIcon, WalletIcon, XIcon } from 'lucide-react'
+import { ArrowLeftRightIcon, CheckCircle2Icon, PhoneIcon, ReceiptTextIcon, WalletIcon, XIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,31 +10,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { TableCard } from '@/components/TableCard'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
+import { CierreResumen } from '@/features/caja/components/CierreResumen'
 import { ComprobanteRetiro } from '@/features/caja/components/ComprobanteRetiro'
-import { MovimientoCajaForm } from '@/features/caja/components/MovimientoCajaForm'
-import { MovimientosCajaTable } from '@/features/caja/components/MovimientosCajaTable'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
-import { useCerrarCaja, useCrearMovimientoCaja, useRetirarExcedenteCaja } from '@/features/caja/hooks/useCajaMutations'
-import { useCajaMovimientos, useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
-import type { CierreFormValues, MovimientoCajaFormValues } from '@/features/caja/schemas/cajaSchema'
+import { useCerrarCaja, useRetirarExcedenteCaja } from '@/features/caja/hooks/useCajaMutations'
+import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
+import type { CierreFormValues } from '@/features/caja/schemas/cajaSchema'
 import { useLogout } from '@/features/auth/hooks/useLogout'
-import { VentaDetalleDialog } from '@/features/ventas/components/VentaDetalleDialog'
-import { VentasTable } from '@/features/ventas/components/VentasTable'
 import { useCrearVenta } from '@/features/ventas/hooks/useCrearVenta'
-import { useVentas } from '@/features/ventas/hooks/useVentas'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatTime } from '@/lib/format'
 import { sumLineTotals } from '@/lib/lineItems'
-import { usePagination } from '@/lib/hooks/usePagination'
 import { cn } from '@/lib/utils'
 import { listProductos, type ProductoConStock } from '@/services/productoService'
-import { getUltimoRetiroExcedente, type VoucherRetiro } from '@/services/cajaService'
-import type { FormaPago, Venta } from '@/services/ventaService'
+import { getUltimoRetiroExcedente, type CajaResumen, type VoucherRetiro } from '@/services/cajaService'
+import type { FormaPago } from '@/services/ventaService'
 import { useAuthStore } from '@/stores/authStore'
 
-interface TicketLinea {
+interface LineaVenta {
   producto: ProductoConStock
   cantidad: number
 }
@@ -45,9 +39,10 @@ const ACCIONES_RAPIDAS = [
   { label: 'Recargas', icon: PhoneIcon },
   { label: 'Retiros', icon: WalletIcon },
   { label: 'Transferencias', icon: ArrowLeftRightIcon },
+  { label: 'Pagos de servicios', icon: ReceiptTextIcon },
 ]
 
-function lineaTotal(linea: TicketLinea): number {
+function lineaTotal(linea: LineaVenta): number {
   return Number(linea.producto.precio_venta) * linea.cantidad
 }
 
@@ -63,21 +58,25 @@ function StatTile({ label, value, emphasis }: { label: string; value: string; em
 export function VentaKiosco() {
   // el Sheet de excedente se porta dentro del <main> del layout (no a document.body), así el
   // appbar de arriba queda siempre visible y usable por encima de la pantalla de bloqueo
-  const { mainEl } = useOutletContext<{ mainEl: HTMLElement | null }>()
+  const { mainEl, agregarProductoRef, terminandoTurnoRef } = useOutletContext<{
+    mainEl: HTMLElement | null
+    agregarProductoRef: MutableRefObject<(producto: ProductoConStock) => void>
+    terminandoTurnoRef: MutableRefObject<boolean>
+  }>()
   const usuario = useAuthStore((state) => state.usuario)
   const puedeRetirarExcedente = usuario?.puede_retirar_excedente === true
 
-  const [lineas, setLineas] = useState<TicketLinea[]>([])
+  const [lineas, setLineas] = useState<LineaVenta[]>([])
   const [sku, setSku] = useState('')
   const [skuError, setSkuError] = useState<string | null>(null)
   const [buscando, setBuscando] = useState(false)
   const [formaPago, setFormaPago] = useState<FormaPago>('efectivo')
   const [pagoCon, setPagoCon] = useState('')
-  const [ticketNumero, setTicketNumero] = useState(1)
-  const [historialOpen, setHistorialOpen] = useState(false)
-  const [movimientosOpen, setMovimientosOpen] = useState(false)
+  const [ventaNumero, setVentaNumero] = useState(1)
   const [cierreOpen, setCierreOpen] = useState(false)
+  const [cierreResultado, setCierreResultado] = useState<CajaResumen | null>(null)
   const [excedenteOpen, setExcedenteOpen] = useState(false)
+  const [ventaConfirmada, setVentaConfirmada] = useState<string | null>(null)
   const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
   const skuInputRef = useRef<HTMLInputElement>(null)
   // último comprobante ya mostrado en esta pantalla, para no reconstruirlo dos veces cuando el
@@ -105,27 +104,47 @@ export function VentaKiosco() {
     (formaPago !== 'efectivo' || Number(pagoCon || 0) >= total) &&
     !crear.isPending
 
+  // compartida por el input de SKU/escáner de esta pantalla y por el picker del panel
+  // "Productos" (ver agregarProductoRef abajo) — un solo lugar que sabe sumar cantidad si el
+  // producto ya está en la venta.
+  function agregarLinea(producto: ProductoConStock) {
+    setLineas((prev) => {
+      const idx = prev.findIndex((l) => l.producto.id === producto.id)
+      if (idx >= 0) {
+        const next = [...prev]
+        next[idx] = { ...next[idx], cantidad: next[idx].cantidad + 1 }
+        return next
+      }
+      return [...prev, { producto, cantidad: 1 }]
+    })
+  }
+
+  // el panel "Productos" vive en el layout, fuera de este componente — se registra la función
+  // de agregar en cada render para que el layout siempre dispare la versión vigente
+  useEffect(() => {
+    agregarProductoRef.current = agregarLinea
+  })
+
+  // avisa al layout que no debe reemplazarnos por `AbrirCajaSplash` mientras se muestra el
+  // resultado del cierre (ver terminandoTurnoRef en ProtectedLayout) — la caja ya cerró en el
+  // servidor en este punto, pero el cajero todavía no confirmó "Salir"
+  useEffect(() => {
+    terminandoTurnoRef.current = cierreResultado !== null
+  }, [cierreResultado, terminandoTurnoRef])
+
   async function buscarYAgregar() {
     const codigo = sku.trim()
     if (!codigo || buscando) return
     setBuscando(true)
     setSkuError(null)
     try {
-      const { items } = await listProductos({ q: codigo, size: 5 })
+      const { items } = await listProductos({ q: codigo, activo: true, size: 5 })
       const producto = items.find((p) => p.sku.toLowerCase() === codigo.toLowerCase())
       if (!producto) {
         setSkuError('Producto no encontrado')
         return
       }
-      setLineas((prev) => {
-        const idx = prev.findIndex((l) => l.producto.id === producto.id)
-        if (idx >= 0) {
-          const next = [...prev]
-          next[idx] = { ...next[idx], cantidad: next[idx].cantidad + 1 }
-          return next
-        }
-        return [...prev, { producto, cantidad: 1 }]
-      })
+      agregarLinea(producto)
       setSku('')
     } catch {
       setSkuError('No se pudo buscar el producto')
@@ -143,12 +162,12 @@ export function VentaKiosco() {
     setLineas((prev) => prev.filter((l) => l.producto.id !== productoId))
   }
 
-  function cancelarTicket() {
+  function cancelarVenta() {
     if (lineas.length === 0) return
     setLineas([])
     setFormaPago('efectivo')
     setPagoCon('')
-    setTicketNumero((n) => n + 1)
+    setVentaNumero((n) => n + 1)
     skuInputRef.current?.focus()
   }
 
@@ -157,12 +176,19 @@ export function VentaKiosco() {
     crear.mutate(
       { items: lineas.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })), forma_pago: formaPago },
       {
-        onSuccess: () => {
+        onSuccess: (venta) => {
           setLineas([])
           setFormaPago('efectivo')
           setPagoCon('')
-          setTicketNumero((n) => n + 1)
+          setVentaNumero((n) => n + 1)
           skuInputRef.current?.focus()
+          // aviso breve, no bloqueante — el cajero sigue escaneando el siguiente producto de
+          // inmediato. El importe sale de la respuesta del servidor (venta ya persistida), no
+          // recalculado en el cliente. La impresión de comprobante para el cliente queda fuera
+          // de alcance por ahora: será automática cuando exista impresora térmica conectada, no
+          // un botón — no tiene sentido simularlo con window.print() mientras tanto.
+          setVentaConfirmada(venta.total)
+          window.setTimeout(() => setVentaConfirmada(null), 3000)
         },
       },
     )
@@ -170,10 +196,15 @@ export function VentaKiosco() {
 
   function handleTerminarTurno(values: CierreFormValues) {
     if (cerrar.isPending) return
-    // "Terminar turno" es el corte + la salida del cajero en un solo paso: al cerrar la caja
-    // ya no hay nada que bloquee el logout (el backend lo exige con caja cerrada), así que
-    // encadenamos el logout apenas se confirma el cierre — vuelve directo al login.
-    cerrar.mutate(values.monto_final, { onSuccess: () => logout.mutate() })
+    // el logout ya no se encadena automático: el cajero tiene que ver primero si su conteo
+    // cuadró contra lo esperado (`CierreResumen`) — antes se deslogueaba de inmediato sin
+    // mostrarle esa diferencia, que solo quedaba disponible para el admin en auditoría.
+    cerrar.mutate(values, { onSuccess: (resumen) => setCierreResultado(resumen) })
+  }
+
+  function handleSalir() {
+    if (logout.isPending) return
+    logout.mutate()
   }
 
   function handleRetirarExcedente() {
@@ -210,13 +241,13 @@ export function VentaKiosco() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (historialOpen || movimientosOpen || cierreOpen || excedenteOpen || voucher !== null) return
+      if (cierreOpen || excedenteOpen || voucher !== null) return
       if (e.key === 'F12') {
         e.preventDefault()
         handleCobrar()
       } else if (e.key === 'Escape') {
         e.preventDefault()
-        cancelarTicket()
+        cancelarVenta()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -246,12 +277,6 @@ export function VentaKiosco() {
               <StatTile label="Esperado en caja" value={formatCurrency(resumen.monto_esperado)} emphasis />
             </>
           )}
-          <Button variant="outline" size="sm" onClick={() => setMovimientosOpen(true)}>
-            Movimientos
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setHistorialOpen(true)}>
-            <HistoryIcon /> Ventas del día
-          </Button>
           <Button size="sm" onClick={() => setCierreOpen(true)}>
             Terminar turno
           </Button>
@@ -259,7 +284,7 @@ export function VentaKiosco() {
       </div>
 
       <div className="flex flex-col gap-4 p-6 lg:min-h-0 lg:flex-1 lg:flex-row lg:overflow-hidden">
-        <div className="flex flex-col gap-4 lg:min-h-0 lg:min-w-0 lg:flex-1 lg:overflow-hidden">
+        <div className="flex flex-col gap-4 lg:min-h-0 lg:min-w-0 lg:flex-1">
           <form
             className="flex shrink-0 flex-col gap-2"
             onSubmit={(e) => {
@@ -295,11 +320,19 @@ export function VentaKiosco() {
             )}
           </form>
 
-          <div className="flex flex-col rounded-xl border bg-card shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+          <div className="relative flex flex-col rounded-xl border bg-card shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+            {ventaConfirmada && (
+              <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
+                <div className="flex animate-in items-center gap-2.5 rounded-full border border-success/30 bg-success/10 px-6 py-3 text-lg font-semibold text-success shadow-md fade-in-0 slide-in-from-top-2">
+                  <CheckCircle2Icon className="size-6" />
+                  Venta registrada · {formatCurrency(ventaConfirmada)}
+                </div>
+              </div>
+            )}
             {lineas.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-1 p-8 text-center">
-                <h2 className="text-lg font-semibold">Ticket vacío</h2>
-                <p className="text-sm text-muted-foreground">Escanea el primer producto para comenzar la venta.</p>
+                <h2 className="text-lg font-semibold">Comienza una venta</h2>
+                <p className="text-sm text-muted-foreground">Escanea el primer producto para agregarlo.</p>
                 <p className="text-sm text-muted-foreground">La caja está abierta y lista para cobrar.</p>
               </div>
             ) : (
@@ -323,7 +356,6 @@ export function VentaKiosco() {
                       <TableCell className="text-right">
                         <Input
                           type="number"
-                          min={1}
                           value={linea.cantidad}
                           onChange={(e) => handleCantidad(linea.producto.id, Number(e.target.value))}
                           className="ml-auto h-8 w-16 text-right tabular-nums"
@@ -352,13 +384,13 @@ export function VentaKiosco() {
             <span>
               {lineas.length} {lineas.length === 1 ? 'producto' : 'productos'} en la venta actual.
             </span>
-            <span className="hidden sm:inline">Enter agrega · F12 cobra · Esc cancela el ticket</span>
+            <span className="hidden sm:inline">Enter agrega · F12 cobra · Esc cancela la venta</span>
           </div>
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm lg:w-[340px] lg:overflow-y-auto">
           <p className="text-sm font-semibold tracking-wide text-primary uppercase">
-            Ticket {String(ticketNumero).padStart(3, '0')}
+            Venta {String(ventaNumero).padStart(3, '0')}
           </p>
 
           <div className="border-t" />
@@ -388,8 +420,6 @@ export function VentaKiosco() {
                 <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Pagó con</Label>
                 <Input
                   type="number"
-                  step="0.01"
-                  inputMode="decimal"
                   value={pagoCon}
                   onChange={(e) => setPagoCon(e.target.value)}
                   className="text-right tabular-nums"
@@ -413,8 +443,8 @@ export function VentaKiosco() {
           <Button size="lg" className="h-12 text-base" disabled={!puedeCobrar} onClick={handleCobrar}>
             {crear.isPending ? 'Cobrando...' : 'Cobrar · F12'}
           </Button>
-          <Button variant="outline" onClick={cancelarTicket} disabled={lineas.length === 0}>
-            Cancelar ticket
+          <Button variant="outline" onClick={cancelarVenta} disabled={lineas.length === 0}>
+            Cancelar venta
           </Button>
 
           {crear.isError && (
@@ -425,28 +455,37 @@ export function VentaKiosco() {
         </div>
       </div>
 
-      <Dialog open={cierreOpen} onOpenChange={setCierreOpen}>
-        <DialogContent>
+      <Dialog
+        open={cierreOpen}
+        onOpenChange={(open) => {
+          // una vez cerrada la caja, no se puede descartar el resumen con Esc/click-afuera —
+          // tiene que salir explícitamente por "Salir" (ver CierreResumen)
+          if (open || cierreResultado === null) setCierreOpen(open)
+        }}
+      >
+        <DialogContent showCloseButton={cierreResultado === null}>
           <DialogHeader>
-            <DialogTitle>Terminar turno</DialogTitle>
+            <DialogTitle>{cierreResultado ? 'Caja cerrada' : 'Terminar turno'}</DialogTitle>
           </DialogHeader>
-          <CierreCajaForm
-            resumen={resumen}
-            isPending={cerrar.isPending || logout.isPending}
-            errorMessage={
-              cerrar.isError
-                ? getApiErrorMessage(cerrar.error, 'No se pudo cerrar la caja')
-                : logout.isError
-                  ? getApiErrorMessage(logout.error, 'Caja cerrada, pero no se pudo cerrar la sesión')
-                  : undefined
-            }
-            onSubmit={handleTerminarTurno}
-          />
+          {cierreResultado ? (
+            <CierreResumen
+              resumen={cierreResultado}
+              isPending={logout.isPending}
+              errorMessage={
+                logout.isError ? getApiErrorMessage(logout.error, 'Caja cerrada, pero no se pudo cerrar la sesión') : undefined
+              }
+              onSalir={handleSalir}
+            />
+          ) : (
+            <CierreCajaForm
+              resumen={resumen}
+              isPending={cerrar.isPending}
+              errorMessage={cerrar.isError ? getApiErrorMessage(cerrar.error, 'No se pudo cerrar la caja') : undefined}
+              onSubmit={handleTerminarTurno}
+            />
+          )}
         </DialogContent>
       </Dialog>
-
-      <MovimientosDialog open={movimientosOpen} onOpenChange={setMovimientosOpen} cajaId={caja?.id} />
-      <VentasDelDiaDialog open={historialOpen} onOpenChange={setHistorialOpen} />
 
       <Sheet
         open={excedenteOpen}
@@ -600,74 +639,5 @@ export function VentaKiosco() {
         </SheetContent>
       </Sheet>
     </div>
-  )
-}
-
-function MovimientosDialog({
-  open,
-  onOpenChange,
-  cajaId,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  cajaId: number | undefined
-}) {
-  const { page, size, setPage } = usePagination(10, open)
-  const { data, isLoading, isError } = useCajaMovimientos(cajaId, page, size)
-  const crearMovimiento = useCrearMovimientoCaja()
-  const movimientos = data?.items ?? []
-  const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / size))
-
-  function handleCrear(values: MovimientoCajaFormValues) {
-    if (crearMovimiento.isPending) return
-    crearMovimiento.mutate({ ...values, motivo: values.motivo || null })
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Movimientos de caja</DialogTitle>
-        </DialogHeader>
-        <MovimientoCajaForm
-          isPending={crearMovimiento.isPending}
-          errorMessage={
-            crearMovimiento.isError ? getApiErrorMessage(crearMovimiento.error, 'No se pudo registrar el movimiento') : undefined
-          }
-          onSubmit={handleCrear}
-        />
-        <div className="border-t pt-4">
-          <TableCard isLoading={isLoading} isError={isError} page={page} pageCount={pageCount} total={total} onPageChange={setPage}>
-            <MovimientosCajaTable movimientos={movimientos} />
-          </TableCard>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function VentasDelDiaDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { page, size, setPage } = usePagination(10, open)
-  const { data, isLoading, isError } = useVentas(page, size)
-  const [detalle, setDetalle] = useState<Venta | null>(null)
-  const ventas = data?.items ?? []
-  const total = data?.total ?? 0
-  const pageCount = Math.max(1, Math.ceil(total / size))
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Ventas del día</DialogTitle>
-          </DialogHeader>
-          <TableCard isLoading={isLoading} isError={isError} page={page} pageCount={pageCount} total={total} onPageChange={setPage}>
-            <VentasTable ventas={ventas} onVerDetalle={setDetalle} />
-          </TableCard>
-        </DialogContent>
-      </Dialog>
-      <VentaDetalleDialog venta={detalle} onClose={() => setDetalle(null)} />
-    </>
   )
 }

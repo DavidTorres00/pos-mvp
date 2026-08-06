@@ -94,6 +94,11 @@
     }
   html {
     @apply font-sans;
+    /* Radix (Dialog/Sheet) bloquea el scroll de `body` al abrir y compensa con padding-right
+       calculado contra el ancho de la scrollbar nativa — sin esto, ese padding aparece de la
+       nada y todo el contenido de atrás se corre visualmente al abrir cualquier panel/dialog.
+       Reservar el gutter siempre deja esa compensación en 0. */
+    scrollbar-gutter: stable;
     }
 }
 

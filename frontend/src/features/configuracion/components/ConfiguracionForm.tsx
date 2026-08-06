@@ -27,7 +27,6 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
       <FormField
         label="Límite de efectivo por caja"
         type="number"
-        step="0.01"
         placeholder="Sin límite"
         register={register('limite_efectivo_caja')}
         error={errors.limite_efectivo_caja}
@@ -39,7 +38,6 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
       <FormField
         label="Tope de gasto por orden a proveedor (OpenPay)"
         type="number"
-        step="0.01"
         placeholder="Sin tope"
         register={register('openpay_tope_por_orden')}
         error={errors.openpay_tope_por_orden}
@@ -48,7 +46,6 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
       <FormField
         label="Tope de gasto diario a proveedores (OpenPay)"
         type="number"
-        step="0.01"
         placeholder="Sin tope"
         register={register('openpay_tope_diario')}
         error={errors.openpay_tope_diario}

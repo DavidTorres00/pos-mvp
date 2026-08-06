@@ -21,7 +21,8 @@ export function useCrearUsuario() {
 
 export function useCerrarCajaDeUsuario() {
   return useApiMutation(
-    ({ id, monto_final }: { id: number; monto_final: number }) => cerrarCajaDeUsuario(id, monto_final),
+    ({ id, monto_final, motivo_diferencia }: { id: number; monto_final: number; motivo_diferencia?: string | null }) =>
+      cerrarCajaDeUsuario(id, monto_final, motivo_diferencia),
     [['caja-de-usuario'], ['cajas-abiertas'], ['usuarios']],
   )
 }
@@ -29,6 +30,6 @@ export function useCerrarCajaDeUsuario() {
 export function useRetirarExcedenteDeUsuario() {
   return useApiMutation(
     (id: number) => retirarExcedenteDeUsuario(id),
-    [['caja-de-usuario'], ['caja-movimientos'], ['cajas-abiertas'], ['auditoria']],
+    [['caja-de-usuario'], ['cajas-abiertas'], ['auditoria']],
   )
 }

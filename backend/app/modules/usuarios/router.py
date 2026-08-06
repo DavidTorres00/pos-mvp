@@ -13,7 +13,7 @@ from app.schemas.pagination import Pagina
 from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPermisosUpdate
 from app.services import auth_service, caja_service, usuario_service
 from app.services.auth_service import CajaAbiertaPropiaError
-from app.services.caja_service import CajaNoAbiertaError, SinExcedenteError
+from app.services.caja_service import CajaNoAbiertaError, MotivoDiferenciaRequeridoError, SinExcedenteError
 from app.services.usuario_service import EmailDuplicadoError, UsuarioNoEncontradoError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -121,9 +121,13 @@ def cerrar_caja_de_usuario(
     admin: Usuario = Depends(get_current_user),
 ) -> CajaResumenOut:
     try:
-        return caja_service.cerrar(db, admin.id, usuario_id, payload.monto_final)
+        return caja_service.cerrar(db, admin.id, usuario_id, payload.monto_final, payload.motivo_diferencia)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
+    except MotivoDiferenciaRequeridoError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Falta efectivo respecto a lo esperado: indica el motivo"
+        )
 
 
 @usuarios_router.post("/{usuario_id}/caja/retirar-excedente", response_model=VoucherRetiroOut)

@@ -9,6 +9,7 @@ import { useProveedores } from '@/features/proveedores/hooks/useProveedores'
 import { compraSchema, type CompraFormValues } from '@/features/compras/schemas/compraSchema'
 import { formatCurrency } from '@/lib/format'
 import { sumLineTotals } from '@/lib/lineItems'
+import { numeroDesdeTexto } from '@/lib/numericInput'
 
 interface CompraFormProps {
   isPending: boolean
@@ -80,19 +81,17 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
             </div>
             <Input
               type="number"
-              step="1"
               placeholder="Cant."
               className="w-20"
               aria-label={`Cantidad producto ${index + 1}`}
-              {...register(`items.${index}.cantidad`, { valueAsNumber: true })}
+              {...register(`items.${index}.cantidad`, { setValueAs: numeroDesdeTexto })}
             />
             <Input
               type="number"
-              step="0.01"
               placeholder="Costo"
               className="w-24"
               aria-label={`Costo unitario producto ${index + 1}`}
-              {...register(`items.${index}.costo_unitario`, { valueAsNumber: true })}
+              {...register(`items.${index}.costo_unitario`, { setValueAs: numeroDesdeTexto })}
             />
             <LineaTotal control={control} index={index} />
             <Button

@@ -13,12 +13,9 @@ class CajaAbrirRequest(BaseModel):
 
 class CajaCerrarRequest(BaseModel):
     monto_final: Decimal = Field(ge=0)
-
-
-class MovimientoCajaCreate(BaseModel):
-    tipo: TipoMovimientoCaja
-    monto: Decimal = Field(gt=0)
-    motivo: str | None = None
+    # solo obligatorio cuando el cierre resulta en faltante (ver caja_service.cerrar) — un
+    # sobrante no exige explicación, no es una pérdida
+    motivo_diferencia: str | None = None
 
 
 class MovimientoCajaOut(BaseModel):

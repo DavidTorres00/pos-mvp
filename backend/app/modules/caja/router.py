@@ -12,7 +12,6 @@ from app.schemas.caja import (
     CajaCerrarRequest,
     CajaOut,
     CajaResumenOut,
-    MovimientoCajaCreate,
     MovimientoCajaOut,
     VoucherRetiroOut,
 )
@@ -26,6 +25,7 @@ from app.services.caja_service import (
     EquipoNoDisponibleError,
     EquipoOcupadoError,
     MontoInicialExcedeLimiteError,
+    MotivoDiferenciaRequeridoError,
     PermisoRetiroExcedenteError,
     SinExcedenteError,
 )
@@ -73,19 +73,13 @@ def cerrar(
     payload: CajaCerrarRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
 ) -> CajaResumenOut:
     try:
-        return caja_service.cerrar(db, usuario.id, usuario.id, payload.monto_final)
+        return caja_service.cerrar(db, usuario.id, usuario.id, payload.monto_final, payload.motivo_diferencia)
     except CajaNoAbiertaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
-
-
-@router.post("/movimientos", response_model=MovimientoCajaOut, status_code=status.HTTP_201_CREATED)
-def crear_movimiento(
-    payload: MovimientoCajaCreate, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
-) -> MovimientoCajaOut:
-    try:
-        return caja_service.registrar_movimiento(db, usuario.id, payload.tipo, payload.monto, payload.motivo)
-    except CajaNoAbiertaError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No hay caja abierta")
+    except MotivoDiferenciaRequeridoError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Falta efectivo respecto a lo esperado: indica el motivo"
+        )
 
 
 @router.get("/movimientos", response_model=Pagina[MovimientoCajaOut])
