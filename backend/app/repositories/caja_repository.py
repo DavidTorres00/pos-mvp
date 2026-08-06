@@ -42,6 +42,16 @@ def get_ultima_cerrada_by_usuario(db: Session, usuario_id: int) -> CajaSesion | 
     return db.scalar(stmt)
 
 
+def get_ultima_cerrada_by_equipo(db: Session, equipo_id: int) -> CajaSesion | None:
+    stmt = (
+        select(CajaSesion)
+        .where(CajaSesion.abierta.is_(False), CajaSesion.equipo_id == equipo_id)
+        .order_by(CajaSesion.fecha_cierre.desc())
+        .limit(1)
+    )
+    return db.scalar(stmt)
+
+
 def get_by_id(db: Session, caja_id: int) -> CajaSesion | None:
     return db.get(CajaSesion, caja_id)
 

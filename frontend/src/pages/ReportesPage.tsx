@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { LoadingState } from '@/components/DataStates'
+import { ErrorState, LoadingState } from '@/components/DataStates'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { getCajasAbiertas, getVentasDia } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,12 +13,20 @@ export function ReportesPage() {
   const [fecha, setFecha] = useState('')
   const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
 
-  const { data: ventasDia, isLoading: isLoadingVentas } = useQuery({
+  const {
+    data: ventasDia,
+    isLoading: isLoadingVentas,
+    isError: isErrorVentas,
+  } = useQuery({
     queryKey: ['reporte-ventas-dia', fecha],
     queryFn: () => getVentasDia(fecha || undefined),
     enabled: isAdmin,
   })
-  const { data: cajasAbiertas, isLoading: isLoadingCajas } = useQuery({
+  const {
+    data: cajasAbiertas,
+    isLoading: isLoadingCajas,
+    isError: isErrorCajas,
+  } = useQuery({
     queryKey: ['cajas-abiertas'],
     queryFn: getCajasAbiertas,
     enabled: isAdmin,
@@ -57,8 +65,8 @@ export function ReportesPage() {
           <CardContent>
             {isLoadingVentas ? (
               <LoadingState />
-            ) : !ventasDia ? (
-              <p className="text-sm text-muted-foreground">No hay datos de ventas para esta fecha.</p>
+            ) : isErrorVentas || !ventasDia ? (
+              <ErrorState bordered={false} />
             ) : (
               <div className="flex flex-col gap-1 text-sm">
                 <p className="text-muted-foreground">Fecha: {formatDate(ventasDia.fecha)}</p>
@@ -78,7 +86,9 @@ export function ReportesPage() {
           <CardContent>
             {isLoadingCajas ? (
               <LoadingState />
-            ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
+            ) : isErrorCajas || !cajasAbiertas ? (
+              <ErrorState bordered={false} />
+            ) : cajasAbiertas.length === 0 ? (
               <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
             ) : (
               <div className="flex flex-col gap-4">

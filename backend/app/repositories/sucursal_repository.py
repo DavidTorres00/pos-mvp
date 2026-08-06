@@ -16,6 +16,10 @@ def get_by_id(db: Session, sucursal_id: int) -> Sucursal | None:
     return db.get(Sucursal, sucursal_id)
 
 
+def get_activas(db: Session) -> list[Sucursal]:
+    return list(db.scalars(select(Sucursal).where(Sucursal.activo.is_(True)).order_by(Sucursal.nombre)))
+
+
 def get_by_nombre(db: Session, nombre: str) -> Sucursal | None:
     return db.scalar(select(Sucursal).where(Sucursal.nombre == nombre))
 

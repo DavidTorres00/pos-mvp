@@ -25,6 +25,19 @@ def get_activos_by_sucursal(db: Session, sucursal_id: int) -> list[Equipo]:
     return list(db.scalars(stmt))
 
 
+def get_todos_by_sucursal(db: Session, sucursal_id: int) -> list[Equipo]:
+    """A diferencia de get_activos_by_sucursal, incluye también los inactivos — el hub de
+    Sucursales necesita listar todas las cajas configuradas, no solo las disponibles para abrir."""
+    stmt = select(Equipo).where(Equipo.sucursal_id == sucursal_id).order_by(Equipo.nombre)
+    return list(db.scalars(stmt))
+
+
+def get_activos(db: Session) -> list[Equipo]:
+    """Todos los equipos activos de todas las sucursales — usado por el reporte de resumen
+    por sucursal del dashboard admin (§ mapear equipo_id -> sucursal_id sin N+1)."""
+    return list(db.scalars(select(Equipo).where(Equipo.activo.is_(True))))
+
+
 def create(db: Session, equipo: Equipo) -> Equipo:
     db.add(equipo)
     db.flush()

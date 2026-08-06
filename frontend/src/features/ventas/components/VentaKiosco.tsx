@@ -225,10 +225,15 @@ export function VentaKiosco() {
     if (excede) {
       setExcedenteOpen(true)
     } else if (excedePrevRef.current) {
-      // se acaba de resolver. Si lo resolvió un admin desde otra sesión (ver docs/BACKEND.md),
-      // este cajero nunca pasó por handleRetirarExcedente y no tiene el comprobante en mano —
-      // lo reconstruye del servidor para poder mostrarlo/imprimirlo en la caja física donde
-      // está el efectivo, que es de donde tiene que salir el comprobante.
+      // se acaba de resolver — cierra la pantalla de bloqueo aunque la resolución venga de otra
+      // sesión (admin remoto): sin esto, `excedenteOpen` se quedaba en `true` para siempre (nada
+      // más la vuelve a poner en `false`) y el voucher de abajo solo la tapaba, no la cerraba —
+      // al descartar el voucher ("Volver a ventas"), reaparecía debajo con los montos ya en $0.
+      setExcedenteOpen(false)
+      // Si lo resolvió un admin desde otra sesión (ver docs/BACKEND.md), este cajero nunca pasó
+      // por handleRetirarExcedente y no tiene el comprobante en mano — lo reconstruye del
+      // servidor para poder mostrarlo/imprimirlo en la caja física donde está el efectivo, que
+      // es de donde tiene que salir el comprobante.
       getUltimoRetiroExcedente().then((data) => {
         if (data && data.movimiento_id !== shownVoucherIdRef.current) {
           shownVoucherIdRef.current = data.movimiento_id

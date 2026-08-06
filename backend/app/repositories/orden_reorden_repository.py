@@ -35,6 +35,18 @@ def get_pendiente_by_regla(db: Session, regla_reorden_id: int) -> OrdenReorden |
     return db.scalar(stmt)
 
 
+def get_pendientes_y_error(db: Session) -> list[OrdenReorden]:
+    """Sin filtro de sucursal, a diferencia de get_all — para el reporte global del dashboard
+    admin (§Requiere atención), que necesita ver todas las sucursales a la vez, no solo la
+    activa en sucursalActivaStore."""
+    stmt = (
+        select(OrdenReorden)
+        .where(OrdenReorden.estado.in_([EstadoOrdenReorden.PENDIENTE, EstadoOrdenReorden.ERROR]))
+        .order_by(OrdenReorden.created_at.desc())
+    )
+    return list(db.scalars(stmt))
+
+
 def sum_pagado_en_fecha(db: Session, fecha: date) -> Decimal:
     stmt = select(func.coalesce(func.sum(OrdenReorden.monto_estimado), 0)).where(
         OrdenReorden.estado == EstadoOrdenReorden.PAGADA, func.date(OrdenReorden.aprobado_at) == fecha

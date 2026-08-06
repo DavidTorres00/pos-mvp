@@ -1,129 +1,219 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  ArrowRightIcon,
-  BarChart3Icon,
-  BoxesIcon,
-  PackageIcon,
-  PiggyBankIcon,
-  ReceiptIcon,
-  ShoppingCartIcon,
-  TagIcon,
-  WalletIcon,
-} from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { AlertTriangleIcon, ListChecksIcon, PiggyBankIcon, WalletIcon } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { LoadingState } from '@/components/DataStates'
+import { ErrorState, LoadingState } from '@/components/DataStates'
+import { AtencionFeed } from '@/features/dashboard/components/AtencionFeed'
+import { CajasAbiertasLista } from '@/features/dashboard/components/CajasAbiertasLista'
+import { SucursalCard } from '@/features/dashboard/components/SucursalCard'
+import { SucursalTabs } from '@/features/dashboard/components/SucursalTabs'
+import { VentasPorHoraChart } from '@/features/dashboard/components/VentasPorHoraChart'
+import { useAcusarAlerta } from '@/features/dashboard/hooks/useAcusarAlerta'
 import { formatCurrency } from '@/lib/format'
-import { getCajasAbiertas, getVentasDia } from '@/services/reporteService'
+import { cn } from '@/lib/utils'
+import { getAtencion, getCajasAbiertas, getResumenSucursales, getVentasPorHora } from '@/services/reporteService'
+import type { Alerta } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
-// solo admin llega aquí: el cajero cae directo en /ventas (ver ProtectedLayout), nunca ve Dashboard
-const MODULOS = [
-  { to: '/productos', label: 'Productos', description: 'Catálogo y precios', icon: PackageIcon },
-  { to: '/categorias', label: 'Categorías', description: 'Organiza tu catálogo', icon: TagIcon },
-  { to: '/inventario', label: 'Inventario', description: 'Entradas y salidas de stock', icon: BoxesIcon },
-  { to: '/compras', label: 'Compras', description: 'Registra compras a proveedores', icon: ShoppingCartIcon },
-  { to: '/ventas', label: 'Ventas', description: 'Historial y auditoría de ventas', icon: ReceiptIcon },
-  { to: '/reportes', label: 'Reportes', description: 'Resumen de ventas y caja', icon: BarChart3Icon },
-]
+interface StatTileProps {
+  label: string
+  value: string
+  hint: string
+  valueClassName?: string
+  icon: typeof WalletIcon
+}
 
+function StatTile({ label, value, hint, valueClassName, icon: Icon }: StatTileProps) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className="size-4" />
+        </span>
+      </CardHeader>
+      <CardContent>
+        <p className={cn('text-3xl font-bold tracking-tight tabular-nums', valueClassName ?? 'text-primary')}>
+          {value}
+        </p>
+        <p className="text-sm text-muted-foreground">{hint}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+// solo admin llega aquí: el cajero cae directo en /ventas (ver ProtectedLayout), nunca ve Dashboard
 export function DashboardPage() {
   const usuario = useAuthStore((state) => state.usuario)
-  const { data: ventasDia, isLoading: isLoadingVentas } = useQuery({
-    queryKey: ['reporte-ventas-dia'],
-    queryFn: () => getVentasDia(),
-  })
-  const { data: cajasAbiertas, isLoading: isLoadingCajasAbiertas } = useQuery({
-    queryKey: ['cajas-abiertas'],
-    queryFn: getCajasAbiertas,
-  })
-  const totalEsperadoCajasAbiertas = (cajasAbiertas ?? []).reduce((sum, c) => sum + Number(c.monto_esperado), 0)
+  const [sucursalSeleccionada, setSucursalSeleccionada] = useState<number | null>(null)
 
-  const ticketPromedio =
-    ventasDia && ventasDia.cantidad_ventas > 0 ? Number(ventasDia.total_ventas) / ventasDia.cantidad_ventas : null
+  const {
+    data: resumenSucursales,
+    isLoading: isLoadingSucursales,
+    isError: isErrorSucursales,
+  } = useQuery({ queryKey: ['resumen-sucursales'], queryFn: getResumenSucursales })
+  const {
+    data: cajasAbiertas,
+    isLoading: isLoadingCajas,
+    isError: isErrorCajas,
+  } = useQuery({ queryKey: ['cajas-abiertas'], queryFn: getCajasAbiertas })
+  const {
+    data: atencion,
+    isLoading: isLoadingAtencion,
+    isError: isErrorAtencion,
+  } = useQuery({ queryKey: ['reportes-atencion'], queryFn: getAtencion })
+  const {
+    data: ventasPorHora,
+    isLoading: isLoadingVentasPorHora,
+    isError: isErrorVentasPorHora,
+  } = useQuery({ queryKey: ['ventas-por-hora'], queryFn: () => getVentasPorHora() })
+
+  const sucursales = resumenSucursales ?? []
+
+  // el filtro de sucursal es puramente client-side sobre datos ya globales (ver docs/FRONTEND.md):
+  // evita agregar sucursal_id a cada endpoint solo para esta vista de "un vistazo"
+  const nombreSeleccionada =
+    sucursalSeleccionada === null
+      ? null
+      : (sucursales.find((s) => s.sucursal_id === sucursalSeleccionada)?.sucursal_nombre ?? null)
+
+  const resumenesFiltrados =
+    sucursalSeleccionada === null ? sucursales : sucursales.filter((s) => s.sucursal_id === sucursalSeleccionada)
+  const cajasFiltradas =
+    nombreSeleccionada === null
+      ? (cajasAbiertas ?? [])
+      : (cajasAbiertas ?? []).filter((c) => c.caja.sucursal_nombre === nombreSeleccionada)
+  // las alertas sin sucursal (p. ej. el agregado de órdenes de reorden, que puede abarcar varias)
+  // se muestran siempre, sin importar el filtro — no tiene sentido esconderlas al elegir una sucursal
+  const alertasFiltradas =
+    nombreSeleccionada === null
+      ? (atencion ?? [])
+      : (atencion ?? []).filter((a) => a.sucursal_nombre === null || a.sucursal_nombre === nombreSeleccionada)
+
+  const ventasHoyTotal = resumenesFiltrados.reduce((sum, r) => sum + Number(r.ventas_hoy), 0)
+  const cantidadVentasHoy = resumenesFiltrados.reduce((sum, r) => sum + r.cantidad_ventas_hoy, 0)
+  const efectivoEsperadoTotal = resumenesFiltrados.reduce((sum, r) => sum + Number(r.efectivo_esperado), 0)
+  const cajasExcedidasTotal = resumenesFiltrados.reduce((sum, r) => sum + r.cajas_excedidas, 0)
+
+  const statsLoading = isLoadingSucursales || isLoadingCajas || isLoadingAtencion
+  const statsError = isErrorSucursales || isErrorCajas || isErrorAtencion
+
+  const acusarAlerta = useAcusarAlerta()
+  function handleAcusar(alerta: Alerta) {
+    if (alerta.auditoria_id === null || acusarAlerta.isPending) return
+    acusarAlerta.mutate({ tipo: alerta.tipo, referenciaId: alerta.auditoria_id })
+  }
 
   return (
     <div className="flex w-full flex-col gap-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Hola, {usuario?.nombre ?? 'de nuevo'}</h1>
-        <p className="text-sm text-muted-foreground">Esto es lo que pasa hoy en tu negocio.</p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Ventas de hoy</CardTitle>
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <WalletIcon className="size-4" />
-            </span>
-          </CardHeader>
-          <CardContent>
-            {isLoadingVentas || !ventasDia ? (
-              <LoadingState />
-            ) : (
-              <div className="flex flex-col gap-1">
-                <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
-                  {formatCurrency(ventasDia.total_ventas)}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {ventasDia.cantidad_ventas} ventas registradas
-                  {ticketPromedio !== null && ` · ticket promedio ${formatCurrency(ticketPromedio)}`}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Estado de caja</CardTitle>
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <PiggyBankIcon className="size-4" />
-            </span>
-          </CardHeader>
-          <CardContent>
-            {isLoadingCajasAbiertas ? (
-              <LoadingState />
-            ) : !cajasAbiertas || cajasAbiertas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay ninguna caja abierta ahora mismo.</p>
-            ) : (
-              <div className="flex flex-col gap-1">
-                <p className="text-3xl font-bold tracking-tight text-primary tabular-nums">
-                  {formatCurrency(totalEsperadoCajasAbiertas)}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Esperado en total · {cajasAbiertas.length} {cajasAbiertas.length === 1 ? 'caja abierta' : 'cajas abiertas'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Accesos rápidos</h2>
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {MODULOS.map((modulo) => (
-            <Link
-              key={modulo.to}
-              to={modulo.to}
-              className="group flex items-center justify-between rounded-xl border bg-card p-4 text-sm shadow-sm ring-1 ring-foreground/8 transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-primary/20"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <modulo.icon className="size-4.5" />
-                </span>
-                <div>
-                  <p className="font-semibold">{modulo.label}</p>
-                  <p className="text-muted-foreground">{modulo.description}</p>
-                </div>
-              </div>
-              <ArrowRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-            </Link>
-          ))}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Hola, {usuario?.nombre ?? 'de nuevo'}</h1>
+          <p className="text-sm text-muted-foreground">Esto es lo que pasa hoy en tu negocio.</p>
         </div>
+        <SucursalTabs sucursales={sucursales} seleccionada={sucursalSeleccionada} onSeleccionar={setSucursalSeleccionada} />
       </div>
+
+      {statsLoading ? (
+        <div className="rounded-xl border p-6">
+          <LoadingState />
+        </div>
+      ) : statsError ? (
+        <div className="rounded-xl border p-6">
+          <ErrorState bordered={false} />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile
+            label="Ventas de hoy"
+            value={formatCurrency(ventasHoyTotal)}
+            hint={`${cantidadVentasHoy} ${cantidadVentasHoy === 1 ? 'venta registrada' : 'ventas registradas'}`}
+            icon={WalletIcon}
+          />
+          <StatTile
+            label="Efectivo esperado en cajas"
+            value={formatCurrency(efectivoEsperadoTotal)}
+            hint={`${cajasFiltradas.length} ${cajasFiltradas.length === 1 ? 'caja abierta' : 'cajas abiertas'}`}
+            icon={PiggyBankIcon}
+          />
+          <StatTile
+            label="Cajas sobre el límite"
+            value={String(cajasExcedidasTotal)}
+            hint="Detienen el cobro hasta retirar el excedente"
+            valueClassName={cajasExcedidasTotal > 0 ? 'text-destructive' : 'text-primary'}
+            icon={AlertTriangleIcon}
+          />
+          <StatTile
+            label="Pendientes de decidir"
+            value={String(alertasFiltradas.length)}
+            hint={alertasFiltradas.length > 0 ? 'Órdenes, cortes y umbrales esperándote' : 'Nada esperando tu decisión'}
+            icon={ListChecksIcon}
+          />
+        </div>
+      )}
+
+      {resumenesFiltrados.length > 0 && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Sucursales</h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {resumenesFiltrados.map((resumen) => (
+              <SucursalCard key={resumen.sucursal_id} resumen={resumen} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Requiere tu atención</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingAtencion ? (
+              <LoadingState />
+            ) : isErrorAtencion ? (
+              <ErrorState bordered={false} />
+            ) : (
+              <AtencionFeed
+                alertas={alertasFiltradas}
+                onAcusar={handleAcusar}
+                acusandoAuditoriaId={acusarAlerta.isPending ? (acusarAlerta.variables?.referenciaId ?? null) : null}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Cajas abiertas ahora</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingCajas ? (
+              <LoadingState />
+            ) : isErrorCajas ? (
+              <ErrorState bordered={false} />
+            ) : (
+              <CajasAbiertasLista resumenes={cajasFiltradas} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ventas por hora</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingVentasPorHora ? (
+            <LoadingState />
+          ) : isErrorVentasPorHora || !ventasPorHora ? (
+            <ErrorState bordered={false} />
+          ) : (
+            <VentasPorHoraChart datos={ventasPorHora} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

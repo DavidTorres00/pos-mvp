@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.models.usuario import RolUsuario, Usuario
-from app.repositories import caja_repository, usuario_repository
+from app.repositories import usuario_repository
 from app.schemas.usuario import UsuarioOut
 from app.services import auditoria_service
 
@@ -17,13 +17,7 @@ class EmailDuplicadoError(Exception):
 
 def listar(db: Session, page: int, size: int) -> tuple[list[UsuarioOut], int]:
     usuarios, total = usuario_repository.get_all(db, page, size)
-    # un solo set de usuario_ids con caja abierta ahora mismo, evita N+1 (una consulta por fila)
-    usuarios_con_caja_activa = {c.usuario_id for c in caja_repository.get_abiertas(db)}
-    items = [
-        UsuarioOut.model_validate(u).model_copy(update={"caja_activa": u.id in usuarios_con_caja_activa})
-        for u in usuarios
-    ]
-    return items, total
+    return [UsuarioOut.model_validate(u) for u in usuarios], total
 
 
 def crear(db: Session, actor_id: int, email: str, nombre: str, password: str, sucursal_id: int) -> Usuario:

@@ -11,7 +11,6 @@ export interface Usuario {
   puede_retirar_excedente: boolean
   sucursal_id: number | null
   sucursal_nombre: string | null
-  caja_activa: boolean
 }
 
 export interface ListUsuariosParams {

@@ -2,6 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import {
   BarChart3Icon,
   BoxesIcon,
+  ChevronDownIcon,
   ClipboardCheckIcon,
   ClipboardListIcon,
   LayoutDashboardIcon,
@@ -23,11 +24,13 @@ import {
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { LoadingState } from '@/components/DataStates'
 import { cn } from '@/lib/utils'
 import { AbrirCajaSplash } from '@/features/caja/components/AbrirCajaSplash'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
+import { useCajaEventos } from '@/features/caja/hooks/useCajaEventos'
 import { useLogout } from '@/features/auth/hooks/useLogout'
 import { useMe } from '@/features/auth/hooks/useMe'
 import { ProductoPickerPanel } from '@/features/ventas/components/ProductoPickerPanel'
@@ -43,19 +46,16 @@ interface NavItem {
   end?: boolean
 }
 
-interface NavGroup {
-  label: string | null
-  links: NavItem[]
-}
+// tab suelto (Panel, Ventas) vs. tab con submenú desplegable (agrupa módulos afines) — el
+// topbar del admin reemplaza a la sidebar clásica (ver `if (esCajero)` más abajo para el chrome
+// del cajero, que es un topbar distinto y no pasa por esta lista)
+type TopbarGroup = ({ type: 'link' } & NavItem) | { type: 'menu'; label: string; links: NavItem[] }
 
-// esta sidebar solo la renderiza el admin — el cajero corta camino antes (ver `if (esCajero)`
-// más abajo) con su propio chrome, así que no hace falta filtrar por rol aquí
-const NAV_GROUPS: NavGroup[] = [
+const TOPBAR_GROUPS: TopbarGroup[] = [
+  { type: 'link', to: '/', label: 'Panel', end: true, icon: LayoutDashboardIcon },
+  { type: 'link', to: '/ventas', label: 'Ventas', icon: ReceiptIcon },
   {
-    label: null,
-    links: [{ to: '/', label: 'Dashboard', end: true, icon: LayoutDashboardIcon }],
-  },
-  {
+    type: 'menu',
     label: 'Catálogo',
     links: [
       { to: '/productos', label: 'Productos', icon: PackageIcon },
@@ -64,10 +64,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Operación',
-    links: [{ to: '/ventas', label: 'Ventas', icon: ReceiptIcon }],
-  },
-  {
+    type: 'menu',
     label: 'Compras',
     links: [
       { to: '/compras', label: 'Compras', icon: ShoppingCartIcon },
@@ -77,10 +74,17 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Administración',
+    type: 'menu',
+    label: 'Reportes',
     links: [
       { to: '/reportes', label: 'Reportes', icon: BarChart3Icon },
       { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon },
+    ],
+  },
+  {
+    type: 'menu',
+    label: 'Ajustes',
+    links: [
       { to: '/usuarios', label: 'Usuarios', icon: UsersIcon },
       { to: '/sucursales', label: 'Sucursales', icon: Building2Icon },
       { to: '/configuracion', label: 'Configuración', icon: SettingsIcon },
@@ -88,12 +92,25 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ]
 
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+function grupoActivo(group: TopbarGroup, pathname: string): boolean {
+  if (group.type === 'link') {
+    return group.end ? pathname === group.to : pathname.startsWith(group.to)
+  }
+  return group.links.some((link) => pathname.startsWith(link.to))
+}
+
+const topbarTabClass = (active: boolean) =>
   cn(
-    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-    isActive
+    'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors outline-none',
+    active
       ? 'bg-sidebar-primary/10 text-sidebar-primary'
       : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+  )
+
+const dropdownNavItemClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-none',
+    isActive ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent hover:text-accent-foreground',
   )
 
 const cajeroNavLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -130,6 +147,7 @@ export function ProtectedLayout() {
   const [pantallaCompleta, setPantallaCompleta] = useState(() => document.fullscreenElement !== null)
   const esCajero = usuario?.role === 'cajero'
   const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(esCajero)
+  useCajaEventos(esCajero)
 
   // sincroniza el ícono con salidas de pantalla completa que no pasan por el botón (Esc, F11)
   useEffect(() => {
@@ -148,10 +166,13 @@ export function ProtectedLayout() {
     }
   }
 
-  // sin este refetch periódico, cambios que un admin hace en vivo (otorgar permiso de retiro
-  // de excedente, desactivar al usuario) nunca le llegaban a una sesión ya abierta — se quedaba
-  // con el snapshot de `usuario` capturado en el login
-  const { data: me } = useMe(isAuthenticated)
+  // sin este refetch periódico, cambios que un admin hace en vivo sobre un cajero (otorgar
+  // permiso de retiro de excedente, desactivar al usuario) nunca le llegaban a una sesión de
+  // cajero ya abierta — se quedaba con el snapshot de `usuario` capturado en el login. Scopeado
+  // a `esCajero`: ningún admin puede editar a otro admin desde la UI (no hay segundo flujo de
+  // alta, ver docs/BACKEND.md), así que pollear /auth/me cada 30s en una sesión admin no tiene
+  // ningún cambio real que detectar — puro consumo de red sin beneficio.
+  const { data: me } = useMe(isAuthenticated && esCajero)
   useEffect(() => {
     if (me) setSession(me)
   }, [me, setSession])
@@ -277,107 +298,97 @@ export function ProtectedLayout() {
   }
 
   return (
-    <div className="flex min-h-svh">
-      <aside className="sticky top-0 hidden h-svh w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar sm:flex">
-        <div className="flex items-center gap-2 px-4 py-4 font-heading text-sm font-semibold tracking-tight text-sidebar-foreground">
-          <StoreIcon className="size-5 text-sidebar-primary" />
-          MVP POS
-        </div>
-
-        <nav aria-label="Principal" className="flex flex-1 flex-col gap-0.5 px-2">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label ?? 'root'} className="flex flex-col gap-0.5 py-1">
-              {group.label && (
-                <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-sidebar-foreground/40 uppercase">
-                  {group.label}
-                </p>
-              )}
-              {group.links.map((link) => (
-                <NavLink key={link.to} to={link.to} end={link.end} className={navLinkClass}>
-                  <link.icon className="size-4 shrink-0" />
-                  {link.label}
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-
-        <div className="flex flex-col gap-2 border-t border-sidebar-border p-3">
-          {usuario && <span className="truncate px-1 text-xs text-sidebar-foreground/60">{usuario.nombre}</span>}
-          <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
-            Cerrar sesión
-          </Button>
-          {logoutError && <p className="px-1 text-xs text-destructive">{logoutError}</p>}
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 border-b bg-background/95 shadow-sm backdrop-blur supports-backdrop-filter:bg-background/80 sm:hidden">
-          <div className="flex items-center justify-between gap-4 px-4 py-3">
-            <div className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight text-foreground">
-              <StoreIcon className="size-5 text-primary" />
-              MVP POS
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
-                Cerrar sesión
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
-                aria-expanded={mobileMenuOpen}
-                onClick={() => setMobileMenuOpen((open) => !open)}
-              >
-                {mobileMenuOpen ? <XIcon /> : <MenuIcon />}
-              </Button>
-            </div>
+    <div className="flex min-h-svh flex-col">
+      <header className="sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
+        <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
+          <div className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
+            <StoreIcon className="size-5 text-sidebar-primary" />
+            MVP POS
           </div>
 
-          {logoutError && <p className="px-4 pb-2 text-xs text-destructive">{logoutError}</p>}
+          <nav aria-label="Principal" className="ml-4 hidden items-center gap-1 sm:flex">
+            {TOPBAR_GROUPS.map((group) => {
+              const active = grupoActivo(group, location.pathname)
+              if (group.type === 'link') {
+                return (
+                  <NavLink key={group.to} to={group.to} end={group.end} className={topbarTabClass(active)}>
+                    <group.icon className="size-4 shrink-0" />
+                    {group.label}
+                  </NavLink>
+                )
+              }
+              return (
+                <DropdownMenu key={group.label}>
+                  <DropdownMenuTrigger className={topbarTabClass(active)}>
+                    {group.label}
+                    <ChevronDownIcon className="size-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {group.links.map((link) => (
+                      <DropdownMenuItem key={link.to} asChild>
+                        <NavLink to={link.to} className={dropdownNavItemClass}>
+                          <link.icon className="size-4 shrink-0" />
+                          {link.label}
+                        </NavLink>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )
+            })}
+          </nav>
 
-          {mobileMenuOpen && (
-            <nav
-              aria-label="Principal (móvil)"
-              className="flex animate-in flex-col gap-0.5 border-t px-2 py-2 fade-in-0 slide-in-from-top-2 duration-150"
+          <div className="ml-auto flex items-center gap-3">
+            {usuario && <span className="hidden truncate text-xs text-sidebar-foreground/60 lg:inline">{usuario.nombre}</span>}
+            <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+              Cerrar sesión
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden"
+              aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((open) => !open)}
             >
-              {NAV_GROUPS.map((group) => (
-                <div key={group.label ?? 'root'} className="flex flex-col gap-0.5 py-1">
-                  {group.label && (
-                    <p className="px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground/70 uppercase">
-                      {group.label}
-                    </p>
-                  )}
-                  {group.links.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      to={link.to}
-                      end={link.end}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                          isActive
-                            ? 'bg-primary/10 text-primary'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        )
-                      }
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <link.icon className="size-4 shrink-0" />
-                      {link.label}
-                    </NavLink>
-                  ))}
-                </div>
-              ))}
-            </nav>
-          )}
-        </header>
+              {mobileMenuOpen ? <XIcon /> : <MenuIcon />}
+            </Button>
+          </div>
+        </div>
 
-        <Suspense fallback={<LoadingState />}>
-          <Outlet />
-        </Suspense>
-      </div>
+        {logoutError && <p className="px-4 pb-2 text-xs text-destructive sm:px-6">{logoutError}</p>}
+
+        {mobileMenuOpen && (
+          <nav
+            aria-label="Principal (móvil)"
+            className="flex animate-in flex-col gap-0.5 border-t border-sidebar-border px-2 py-2 fade-in-0 slide-in-from-top-2 duration-150 sm:hidden"
+          >
+            {TOPBAR_GROUPS.flatMap((group) => (group.type === 'link' ? [group] : group.links)).map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-primary/10 text-sidebar-primary'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                  )
+                }
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <link.icon className="size-4 shrink-0" />
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+        )}
+      </header>
+
+      <Suspense fallback={<LoadingState />}>
+        <Outlet />
+      </Suspense>
     </div>
   )
 }

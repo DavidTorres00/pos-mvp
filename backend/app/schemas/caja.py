@@ -55,6 +55,10 @@ class CajaResumenOut(BaseModel):
     total_salidas: Decimal
     monto_esperado: Decimal
     diferencia: Decimal | None
+    # límite vigente para la sucursal de esta caja (override propio o el default global) — para
+    # que cualquier pantalla que liste cajas (Dashboard, Sucursales) compare contra el límite
+    # correcto sin tener que resolverlo aparte
+    limite_efectivo: Decimal | None
 
 
 class CajaActualOut(BaseModel):
@@ -62,6 +66,22 @@ class CajaActualOut(BaseModel):
     efectivo_actual: Decimal | None
     limite_efectivo: Decimal | None
     excede_limite: bool
+    ultimo_cierre: datetime | None
+
+
+class EquipoCajaOut(BaseModel):
+    """Estado en vivo de una caja registradora (Equipo) dentro del hub de una sucursal — a
+    diferencia de CajaResumenOut, existe una fila por Equipo aunque esté cerrado ahora mismo."""
+
+    equipo_id: int
+    equipo_nombre: str
+    equipo_activo: bool
+    estado: str  # "abierta" | "excedida" | "cerrada"
+    cajero_usuario_id: int | None
+    cajero_nombre: str | None
+    monto_esperado: Decimal | None
+    limite_efectivo: Decimal | None
+    fecha_apertura: datetime | None
     ultimo_cierre: datetime | None
 
 

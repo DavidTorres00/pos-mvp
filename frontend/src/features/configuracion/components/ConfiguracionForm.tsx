@@ -25,14 +25,15 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <FormField
-        label="Límite de efectivo por caja"
+        label="Límite de efectivo por caja (default global)"
         type="number"
         placeholder="Sin límite"
         register={register('limite_efectivo_caja')}
         error={errors.limite_efectivo_caja}
       />
       <p className="-mt-2 text-xs text-muted-foreground">
-        Al superarlo, se ofrece retirar el excedente y dejar la caja en el fondo inicial.
+        Al superarlo, se ofrece retirar el excedente y dejar la caja en el fondo inicial. Cada sucursal puede
+        sobreescribirlo con su propio límite desde Sucursales.
       </p>
 
       <FormField
@@ -50,6 +51,18 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
         register={register('openpay_tope_diario')}
         error={errors.openpay_tope_diario}
       />
+
+      <FormField
+        label="Umbral de stock bajo (sin regla de reorden)"
+        type="number"
+        placeholder="Desactivado"
+        register={register('umbral_stock_bajo_default')}
+        error={errors.umbral_stock_bajo_default}
+      />
+      <p className="-mt-2 text-xs text-muted-foreground">
+        Avisa en el Dashboard cuando un producto cae en o debajo de esta cantidad y no tiene su propia regla de
+        reorden configurada.
+      </p>
 
       {errorMessage && (
         <p role="alert" className="text-sm text-destructive">

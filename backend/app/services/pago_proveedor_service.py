@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.openpay_client import OpenPayError
 from app.core.openpay_client import crear_payout as openpay_crear_payout
+from app.core.tiempo import hoy_negocio
 from app.models.orden_reorden import EstadoOrdenReorden, OrdenReorden
 from app.models.usuario import Usuario
 from app.repositories import configuracion_repository, orden_reorden_repository, proveedor_repository
@@ -43,8 +44,7 @@ def aprobar_y_pagar(db: Session, admin: Usuario, orden_id: int) -> OrdenReorden:
     if configuracion.openpay_tope_por_orden is not None and orden.monto_estimado > configuracion.openpay_tope_por_orden:
         raise TopeGastoExcedidoError("orden")
 
-    hoy = datetime.now(timezone.utc).date()
-    gastado_hoy = orden_reorden_repository.sum_pagado_en_fecha(db, hoy)
+    gastado_hoy = orden_reorden_repository.sum_pagado_en_fecha(db, hoy_negocio())
     if (
         configuracion.openpay_tope_diario is not None
         and gastado_hoy + orden.monto_estimado > configuracion.openpay_tope_diario

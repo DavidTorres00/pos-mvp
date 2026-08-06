@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -10,6 +11,7 @@ import { TableCard } from '@/components/TableCard'
 import { useAuditoria } from '@/features/auditoria/hooks/useAuditoria'
 import { formatDateTime } from '@/lib/format'
 import { usePagination } from '@/lib/hooks/usePagination'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 
 const ENTIDADES = [
@@ -61,7 +63,12 @@ function formatDetalle(detalle: Record<string, unknown> | null): string {
 
 export function AuditoriaPage() {
   const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
-  const [entidad, setEntidad] = useState<string>('')
+  // llegada desde la alerta "Faltante en un cierre de caja" del Dashboard: precarga el filtro
+  // que más probablemente muestre ese evento en la primera página, y lo resalta al encontrarlo
+  const [searchParams] = useSearchParams()
+  const highlightIdParam = searchParams.get('highlightId')
+  const highlightId = highlightIdParam ? Number(highlightIdParam) : null
+  const [entidad, setEntidad] = useState<string>(() => (highlightId !== null ? 'caja_sesion' : ''))
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
   const { page, size, setPage } = usePagination(20, `${entidad}-${desde}-${hasta}`)
@@ -74,6 +81,11 @@ export function AuditoriaPage() {
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / size))
   const hayFiltrosActivos = entidad !== '' || desde !== '' || hasta !== ''
+
+  useEffect(() => {
+    if (highlightId === null) return
+    document.getElementById(`auditoria-evento-${highlightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightId, eventos.length])
 
   function limpiarFiltros() {
     setEntidad('')
@@ -152,7 +164,11 @@ export function AuditoriaPage() {
             </TableHeader>
             <TableBody>
               {eventos.map((evento) => (
-                <TableRow key={evento.id}>
+                <TableRow
+                  key={evento.id}
+                  id={`auditoria-evento-${evento.id}`}
+                  className={cn(evento.id === highlightId && 'bg-primary/10 outline outline-2 -outline-offset-2 outline-primary')}
+                >
                   <TableCell className="whitespace-nowrap">{formatDateTime(evento.created_at)}</TableCell>
                   <TableCell>{evento.usuario?.nombre ?? '—'}</TableCell>
                   <TableCell>{ACCION_LABELS[evento.accion] ?? evento.accion}</TableCell>

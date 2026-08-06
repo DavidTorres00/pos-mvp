@@ -33,3 +33,16 @@ def get_all(
         # 'hasta' llega como fecha (medianoche); se incluye el día completo, no solo hasta las 00:00
         stmt = stmt.where(Auditoria.created_at < hasta + timedelta(days=1))
     return paginar(db, stmt, page, size)
+
+
+def get_recientes_por_accion(db: Session, accion: str, desde: datetime) -> list[Auditoria]:
+    """Sin paginar — usado por el reporte de atención del dashboard admin, que necesita
+    inspeccionar `detalle` en Python (JSON genérico, no jsonb: no hay operador de containment
+    eficiente para filtrar `diferencia < 0` en SQL, y el volumen de cierres de caja no lo
+    justifica)."""
+    stmt = (
+        select(Auditoria)
+        .where(Auditoria.accion == accion, Auditoria.created_at >= desde)
+        .order_by(Auditoria.created_at.desc())
+    )
+    return list(db.scalars(stmt))

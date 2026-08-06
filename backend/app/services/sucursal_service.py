@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -25,10 +27,24 @@ def obtener(db: Session, sucursal_id: int) -> Sucursal:
     return sucursal
 
 
-def crear(db: Session, usuario_id: int, nombre: str) -> Sucursal:
+def crear(
+    db: Session,
+    usuario_id: int,
+    nombre: str,
+    direccion: str | None,
+    responsable: str | None,
+    telefono: str | None,
+    limite_efectivo_caja: Decimal | None,
+) -> Sucursal:
     if sucursal_repository.get_by_nombre(db, nombre) is not None:
         raise NombreDuplicadoError(nombre)
-    sucursal = Sucursal(nombre=nombre)
+    sucursal = Sucursal(
+        nombre=nombre,
+        direccion=direccion,
+        responsable=responsable,
+        telefono=telefono,
+        limite_efectivo_caja=limite_efectivo_caja,
+    )
     try:
         with db.begin_nested():
             sucursal = sucursal_repository.create(db, sucursal)
@@ -38,7 +54,15 @@ def crear(db: Session, usuario_id: int, nombre: str) -> Sucursal:
     return sucursal
 
 
-def actualizar(db: Session, sucursal_id: int, nombre: str) -> Sucursal:
+def actualizar(
+    db: Session,
+    sucursal_id: int,
+    nombre: str,
+    direccion: str | None,
+    responsable: str | None,
+    telefono: str | None,
+    limite_efectivo_caja: Decimal | None,
+) -> Sucursal:
     sucursal = sucursal_repository.get_by_id(db, sucursal_id)
     if sucursal is None:
         raise SucursalNoEncontradaError(sucursal_id)
@@ -48,6 +72,10 @@ def actualizar(db: Session, sucursal_id: int, nombre: str) -> Sucursal:
         raise NombreDuplicadoError(nombre)
 
     sucursal.nombre = nombre
+    sucursal.direccion = direccion
+    sucursal.responsable = responsable
+    sucursal.telefono = telefono
+    sucursal.limite_efectivo_caja = limite_efectivo_caja
     try:
         with db.begin_nested():
             return sucursal_repository.save(db, sucursal)

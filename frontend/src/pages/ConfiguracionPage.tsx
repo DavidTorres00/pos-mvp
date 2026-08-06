@@ -16,6 +16,7 @@ function toPayload(values: ConfiguracionFormValues): ConfiguracionNegocioPayload
     limite_efectivo_caja: values.limite_efectivo_caja ? Number(values.limite_efectivo_caja) : undefined,
     openpay_tope_por_orden: values.openpay_tope_por_orden ? Number(values.openpay_tope_por_orden) : undefined,
     openpay_tope_diario: values.openpay_tope_diario ? Number(values.openpay_tope_diario) : undefined,
+    umbral_stock_bajo_default: values.umbral_stock_bajo_default ? Number(values.umbral_stock_bajo_default) : undefined,
   }
 }
 
@@ -52,6 +53,7 @@ export function ConfiguracionPage() {
             limite_efectivo_caja: toInputValue(data?.limite_efectivo_caja),
             openpay_tope_por_orden: toInputValue(data?.openpay_tope_por_orden),
             openpay_tope_diario: toInputValue(data?.openpay_tope_diario),
+            umbral_stock_bajo_default: toInputValue(data?.umbral_stock_bajo_default?.toString()),
           }}
           isPending={update.isPending}
           errorMessage={update.isError ? getApiErrorMessage(update.error, 'No se pudo guardar la configuración') : undefined}

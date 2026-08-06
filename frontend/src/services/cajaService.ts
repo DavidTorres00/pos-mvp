@@ -45,6 +45,7 @@ export interface CajaResumen {
   total_salidas: string
   monto_esperado: string
   diferencia: string | null
+  limite_efectivo: string | null
 }
 
 export async function getCajaActual(): Promise<CajaActual> {

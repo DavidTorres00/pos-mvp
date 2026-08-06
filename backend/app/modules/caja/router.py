@@ -1,8 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import asyncio
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
+from app.core.eventos_caja import eventos_caja
 from app.database.session import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.repositories import equipo_repository
@@ -36,6 +40,31 @@ router = APIRouter(prefix="/caja", tags=["caja"], dependencies=[Depends(get_curr
 @router.get("/actual", response_model=CajaActualOut)
 def actual(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> CajaActualOut:
     return caja_service.obtener_actual(db, usuario.id)
+
+
+@router.get("/eventos")
+async def eventos(request: Request, usuario: Usuario = Depends(get_current_user)) -> StreamingResponse:
+    """Server-Sent Events: complementa (no reemplaza) el polling de 15s de `useCajaActual` en
+    el frontend — cuando un admin retira el excedente o cierra la caja de este usuario desde
+    otra sesión, `caja_service` notifica por aquí para que se entere al instante en vez de
+    esperar el próximo ciclo. El payload no importa, es solo una señal de "vuelve a pedir tu
+    caja actual" — la única fuente de verdad sigue siendo `GET /caja/actual`."""
+
+    async def generador():
+        cola = eventos_caja.suscribirse(usuario.id)
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    await asyncio.wait_for(cola.get(), timeout=25)
+                    yield "event: cambio\ndata: caja\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+        finally:
+            eventos_caja.desuscribirse(usuario.id, cola)
+
+    return StreamingResponse(generador(), media_type="text/event-stream")
 
 
 @router.get("/equipos-disponibles", response_model=list[EquipoOut])
