@@ -30,6 +30,7 @@ export type AlertaTipo =
   | 'orden_reorden_error'
   | 'caja_sin_cierre'
   | 'stock_bajo_sin_regla'
+  | 'sin_stock'
   | 'faltante_caja'
 
 export interface Alerta {

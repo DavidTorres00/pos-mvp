@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
+import { StockCell } from '@/components/StockCell'
 import { formatCurrency } from '@/lib/format'
 import type { ProductoConStock } from '@/services/productoService'
 
@@ -63,7 +64,9 @@ export function ProductosTable({
                   : producto.categoria?.nombre ?? '—'}
               </TableCell>
               <TableCell className="font-semibold tabular-nums">{formatCurrency(producto.precio_venta)}</TableCell>
-              <TableCell>{producto.stock}</TableCell>
+              <TableCell>
+                <StockCell stock={producto.stock} />
+              </TableCell>
               <TableCell>
                 {canManage ? (
                   <div className="flex items-center gap-2">

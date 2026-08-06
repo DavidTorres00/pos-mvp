@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.tiempo import hoy_negocio
 from app.models.orden_reorden import EstadoOrdenReorden
+from app.models.sucursal import Sucursal
 from app.repositories import (
     alerta_acuse_repository,
     auditoria_repository,
@@ -21,8 +22,8 @@ from app.schemas.reporte import AlertaOut, SucursalResumenOut, VentasDiaOut, Ven
 from app.services import caja_service
 
 # únicos tipos de alerta basados en un hecho histórico inmutable — las demás (caja_excedida,
-# caja_sin_cierre, orden_reorden_*, stock_bajo_sin_regla) describen una condición viva que se
-# resuelve sola, acusarlas a mano solo escondería un problema que sigue ahí
+# caja_sin_cierre, orden_reorden_*, stock_bajo_sin_regla, sin_stock) describen una condición viva
+# que se resuelve sola, acusarlas a mano solo escondería un problema que sigue ahí
 TIPOS_ACUSABLES = {"faltante_caja"}
 
 HORAS_CAJA_SIN_CIERRE = 24
@@ -105,7 +106,7 @@ def resumen_sucursales(db: Session) -> list[SucursalResumenOut]:
     return resultado
 
 
-def _meta_por_equipo(db: Session) -> dict[int, tuple[int, Decimal | None]]:
+def _meta_por_equipo(db: Session, sucursales_activas: list[Sucursal]) -> dict[int, tuple[int, Decimal | None]]:
     """(sucursal_id, límite de efectivo vigente) por equipo — resuelve el override de su
     sucursal si existe, si no el default global (mismo criterio que
     `caja_service.limite_efectivo_para_sucursal`, calculado una sola vez para todos los equipos
@@ -114,7 +115,7 @@ def _meta_por_equipo(db: Session) -> dict[int, tuple[int, Decimal | None]]:
     limite_global = configuracion_repository.get(db).limite_efectivo_caja
     limites_por_sucursal = {
         s.id: (s.limite_efectivo_caja if s.limite_efectivo_caja is not None else limite_global)
-        for s in sucursal_repository.get_activas(db)
+        for s in sucursales_activas
     }
     return {
         e.id: (e.sucursal_id, limites_por_sucursal.get(e.sucursal_id, limite_global))
@@ -263,6 +264,41 @@ def _alertas_stock_bajo_sin_regla(db: Session) -> list[AlertaOut]:
     ]
 
 
+def _alertas_sin_stock(db: Session, sucursales_activas: list[Sucursal]) -> list[AlertaOut]:
+    total_productos = reporte_repository.total_productos_activos(db)
+    if total_productos == 0:
+        return []
+    con_stock_por_sucursal = reporte_repository.conteo_con_stock_por_sucursal(db)
+    afectadas = [
+        (sucursal, cantidad)
+        for sucursal in sucursales_activas
+        if (cantidad := total_productos - con_stock_por_sucursal.get(sucursal.id, 0)) > 0
+    ]
+    if not afectadas:
+        return []
+    total = sum(cantidad for _, cantidad in afectadas)
+    sucursal_id = None
+    sucursal_nombre = None
+    if len(afectadas) == 1:
+        sucursal, _ = afectadas[0]
+        sucursal_id = sucursal.id
+        sucursal_nombre = sucursal.nombre
+    return [
+        AlertaOut(
+            tipo="sin_stock",
+            titulo=f"{total} {'producto' if total == 1 else 'productos'} sin stock",
+            descripcion="Sin unidades disponibles para vender hasta que se registre una entrada de inventario.",
+            sucursal_nombre=sucursal_nombre,
+            cantidad=total,
+            # es un corte del inventario ahora mismo, no un evento con fecha propia
+            created_at=None,
+            sucursal_id=sucursal_id,
+            equipo_id=None,
+            auditoria_id=None,
+        )
+    ]
+
+
 def _alertas_faltante_caja(db: Session) -> list[AlertaOut]:
     desde = datetime.now(UTC) - timedelta(hours=HORAS_FALTANTE_RECIENTE)
     eventos = auditoria_repository.get_recientes_por_accion(db, "caja_cerrada", desde)
@@ -304,12 +340,14 @@ def _alertas_faltante_caja(db: Session) -> list[AlertaOut]:
 def atencion(db: Session) -> list[AlertaOut]:
     cajas = caja_repository.get_abiertas(db)
     resumenes = caja_service.resumenes(db, cajas)
+    sucursales_activas = sucursal_repository.get_activas(db)
 
     alertas: list[AlertaOut] = []
-    alertas += _alertas_cajas_excedidas(db, resumenes, _meta_por_equipo(db))
+    alertas += _alertas_cajas_excedidas(db, resumenes, _meta_por_equipo(db, sucursales_activas))
     alertas += _alertas_reorden(db)
     alertas += _alertas_cajas_sin_cierre(cajas)
     alertas += _alertas_stock_bajo_sin_regla(db)
+    alertas += _alertas_sin_stock(db, sucursales_activas)
     alertas += _alertas_faltante_caja(db)
     return alertas
 

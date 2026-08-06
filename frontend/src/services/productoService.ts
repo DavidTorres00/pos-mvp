@@ -34,6 +34,7 @@ export interface ProductoPayload {
 export interface ListProductosParams {
   q?: string
   activo?: boolean
+  categoriaId?: number | null
   sucursalId?: number | null
   page?: number
   size?: number
@@ -42,9 +43,16 @@ export interface ListProductosParams {
 export async function listProductos(
   params: ListProductosParams = {},
 ): Promise<PaginatedResponse<ProductoConStock>> {
-  const { q, activo, sucursalId, page, size } = params
+  const { q, activo, categoriaId, sucursalId, page, size } = params
   const { data } = await api.get<PaginatedResponse<ProductoConStock>>('/productos', {
-    params: { q: q || undefined, activo, sucursal_id: sucursalId ?? undefined, page, size },
+    params: {
+      q: q || undefined,
+      activo,
+      categoria_id: categoriaId ?? undefined,
+      sucursal_id: sucursalId ?? undefined,
+      page,
+      size,
+    },
   })
   return data
 }

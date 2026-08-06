@@ -67,3 +67,23 @@ def productos_bajo_umbral_sin_regla(db: Session, umbral: int) -> list[tuple[Prod
         .order_by(StockSucursal.cantidad)
     )
     return list(db.execute(stmt).all())
+
+
+def total_productos_activos(db: Session) -> int:
+    return db.scalar(select(func.count(Producto.id)).where(Producto.activo.is_(True))) or 0
+
+
+def conteo_con_stock_por_sucursal(db: Session) -> dict[int, int]:
+    """Por sucursal, cuántos productos activos tienen stock positivo registrado — join normal
+    (no cross join) contra StockSucursal. `reporte_service._alertas_sin_stock` resta este
+    conteo contra `total_productos_activos` para saber cuántos productos NO tienen stock en cada
+    sucursal, incluyendo las que no tienen ninguna fila de `StockSucursal` todavía (sucursal
+    recién creada, sin ningún movimiento de inventario) — sin necesidad de generar el producto
+    cartesiano Producto×Sucursal para llegar a ese número."""
+    stmt = (
+        select(StockSucursal.sucursal_id, func.count(func.distinct(StockSucursal.producto_id)))
+        .join(Producto, Producto.id == StockSucursal.producto_id)
+        .where(Producto.activo.is_(True), StockSucursal.cantidad > 0)
+        .group_by(StockSucursal.sucursal_id)
+    )
+    return dict(db.execute(stmt).all())

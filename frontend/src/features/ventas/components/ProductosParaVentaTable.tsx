@@ -3,6 +3,7 @@ import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
+import { StockCell } from '@/components/StockCell'
 import { formatCurrency } from '@/lib/format'
 import type { ProductoConStock } from '@/services/productoService'
 
@@ -46,11 +47,14 @@ export function ProductosParaVentaTable({
             <TableCell className="text-right font-semibold tabular-nums">
               {formatCurrency(producto.precio_venta)}
             </TableCell>
-            <TableCell className="text-right tabular-nums">{producto.stock}</TableCell>
+            <TableCell className="text-right tabular-nums">
+              <StockCell stock={producto.stock} />
+            </TableCell>
             <TableCell>
               <Button
                 variant={agregadoId === producto.id ? 'secondary' : 'outline'}
                 size="sm"
+                disabled={producto.stock === 0}
                 onClick={() => onAgregar(producto)}
               >
                 {agregadoId === producto.id ? (

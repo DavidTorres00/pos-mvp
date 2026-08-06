@@ -26,7 +26,7 @@ export function MovimientoForm({ isPending, errorMessage, onSubmit }: Movimiento
   })
   // Fetches the largest page the backend allows (size=100) since this dropdown needs the
   // full catalog, not a paginated slice.
-  const { data: productosData } = useProductos('', 1, 100)
+  const { data: productosData } = useProductos({ q: '' }, 1, 100)
   const productos = productosData?.items ?? []
 
   return (

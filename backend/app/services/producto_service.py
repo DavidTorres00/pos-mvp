@@ -58,9 +58,15 @@ def _a_stock_out(producto: Producto, stock: int) -> ProductoStockOut:
 
 
 def listar(
-    db: Session, q: str | None, activo: bool | None, sucursal_id: int, page: int, size: int
+    db: Session,
+    q: str | None,
+    activo: bool | None,
+    categoria_id: int | None,
+    sucursal_id: int,
+    page: int,
+    size: int,
 ) -> tuple[list[ProductoStockOut], int]:
-    productos, total = producto_repository.get_all(db, q, activo, page, size)
+    productos, total = producto_repository.get_all(db, q, activo, categoria_id, page, size)
     cantidades = stock_sucursal_repository.get_cantidades(db, [p.id for p in productos], sucursal_id)
     items = [_a_stock_out(p, cantidades.get(p.id, 0)) for p in productos]
     return items, total

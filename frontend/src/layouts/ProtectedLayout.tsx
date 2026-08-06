@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3Icon,
   BoxesIcon,
@@ -16,7 +17,6 @@ import {
   Building2Icon,
   ShoppingCartIcon,
   StoreIcon,
-  TagIcon,
   TruckIcon,
   UsersIcon,
   XIcon,
@@ -27,6 +27,9 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { LoadingState } from '@/components/DataStates'
+import { ServidorMantenimiento } from '@/components/ServidorMantenimiento'
+import { ServidorRestablecido } from '@/components/ServidorRestablecido'
+import { useSaludServidor } from '@/lib/hooks/useSaludServidor'
 import { cn } from '@/lib/utils'
 import { AbrirCajaSplash } from '@/features/caja/components/AbrirCajaSplash'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
@@ -38,6 +41,7 @@ import { getApiErrorMessage } from '@/lib/apiError'
 import { formatTime } from '@/lib/format'
 import type { ProductoConStock } from '@/services/productoService'
 import { useAuthStore } from '@/stores/authStore'
+import { useServidorStore } from '@/stores/servidorStore'
 
 interface NavItem {
   to: string
@@ -59,7 +63,6 @@ const TOPBAR_GROUPS: TopbarGroup[] = [
     label: 'Catálogo',
     links: [
       { to: '/productos', label: 'Productos', icon: PackageIcon },
-      { to: '/categorias', label: 'Categorías', icon: TagIcon },
       { to: '/inventario', label: 'Inventario', icon: BoxesIcon },
     ],
   },
@@ -125,6 +128,24 @@ export function ProtectedLayout() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
   const usuario = useAuthStore((state) => state.usuario)
   const setSession = useAuthStore((state) => state.setSession)
+  const servidorCaido = useServidorStore((state) => state.caido)
+  useSaludServidor(isAuthenticated)
+  const queryClient = useQueryClient()
+  // pantalla de recuperación transitoria (ver ServidorRestablecido) — se activa una vez, al
+  // detectar la transición true→false, y se cierra sola o con el clic de "Continuar ahora"
+  const [servidorRestablecido, setServidorRestablecido] = useState(false)
+  const servidorCaidoPrevRef = useRef(false)
+  useEffect(() => {
+    if (!servidorCaido && servidorCaidoPrevRef.current) {
+      setServidorRestablecido(true)
+      // el heartbeat solo prueba que /api/health responde, no que `caja-actual` ya está al día
+      // (pudo quedar con datos de hace varios segundos mientras el servidor estuvo caído) —
+      // sin este refetch proactivo, el cajero podía ver un flash de `AbrirCajaSplash` en cuanto
+      // se cierra esta pantalla, antes de que el próximo poll de 15s trajera la caja real.
+      queryClient.refetchQueries({ queryKey: ['caja-actual'] })
+    }
+    servidorCaidoPrevRef.current = servidorCaido
+  }, [servidorCaido, queryClient])
   const location = useLocation()
   const logout = useLogout()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -179,6 +200,17 @@ export function ProtectedLayout() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
+  }
+
+  // gatea TODO (cajero y admin) antes de montar cualquier topbar/página — mientras el servidor
+  // no responde no tiene sentido dejar que cada query/mutation falle por su lado (toasts +
+  // ErrorState dispersos, ver services/api.ts). Va antes de los checks de `esCajero` de abajo:
+  // con el servidor caído no hay forma confiable de saber si hay caja abierta o no.
+  if (servidorCaido) {
+    return <ServidorMantenimiento />
+  }
+  if (servidorRestablecido) {
+    return <ServidorRestablecido onContinuar={() => setServidorRestablecido(false)} />
   }
 
   // el cajero no ve nada de la app (sidebar, nav, otras páginas) hasta que exista una caja

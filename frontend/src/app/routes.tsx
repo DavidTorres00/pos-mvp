@@ -6,7 +6,6 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import {
   AuditoriaPage,
-  CategoriasPage,
   ComprasPage,
   ConfiguracionPage,
   DashboardPage,
@@ -30,7 +29,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'productos', element: <ProductosPage /> },
-      { path: 'categorias', element: <CategoriasPage /> },
       { path: 'inventario', element: <InventarioPage /> },
       { path: 'compras', element: <ComprasPage /> },
       { path: 'proveedores', element: <ProveedoresPage /> },

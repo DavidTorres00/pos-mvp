@@ -15,12 +15,21 @@ const SIN_SUBCATEGORIA = 'sin-subcategoria'
 
 interface ProductoFormProps {
   defaultValues?: ProductoFormValues
+  // categoría precargada al crear desde el detalle de una categoría (hub de Productos) — se
+  // ignora si `defaultValues` viene (edición), y no cuenta como "está editando"
+  defaultCategoriaId?: number | null
   isPending: boolean
   errorMessage?: string
   onSubmit: (values: ProductoFormValues) => void
 }
 
-export function ProductoForm({ defaultValues, isPending, errorMessage, onSubmit }: ProductoFormProps) {
+export function ProductoForm({
+  defaultValues,
+  defaultCategoriaId = null,
+  isPending,
+  errorMessage,
+  onSubmit,
+}: ProductoFormProps) {
   const isEditing = defaultValues !== undefined
   const {
     register,
@@ -30,7 +39,7 @@ export function ProductoForm({ defaultValues, isPending, errorMessage, onSubmit 
     formState: { errors },
   } = useForm<ProductoFormValues>({
     resolver: zodResolver(productoSchema),
-    defaultValues: defaultValues ?? { categoria_id: null, subcategoria_id: null, sku: null },
+    defaultValues: defaultValues ?? { categoria_id: defaultCategoriaId, subcategoria_id: null, sku: null },
   })
   // Fetches the largest page the backend allows (size=100) since this dropdown needs the
   // full catalog, not a paginated slice.

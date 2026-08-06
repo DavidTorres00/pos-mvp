@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 
 import { Toaster } from '@/components/ui/sonner'
+import { esErrorDeRed } from '@/lib/apiError'
 
 function isClientError(error: unknown): boolean {
   if (!isAxiosError(error) || !error.response) return false
@@ -22,7 +23,10 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: () => {
+    onError: (error) => {
+      // servidor caído ya tiene su propia pantalla completa (ver ProtectedLayout /
+      // ServidorMantenimiento) — un toast encima sería ruido duplicado
+      if (esErrorDeRed(error)) return
       toast.error('No se pudo cargar la información. Intenta nuevamente.')
     },
   }),

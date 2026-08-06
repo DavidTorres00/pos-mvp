@@ -6,6 +6,7 @@ import {
   ClipboardCheckIcon,
   ClipboardListIcon,
   ClockIcon,
+  PackageXIcon,
   type LucideIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -21,6 +22,7 @@ const ALERTA_CONFIG: Record<AlertaTipo, { icon: LucideIcon; accionLabel: string;
   orden_reorden_error: { icon: ClipboardCheckIcon, accionLabel: 'Revisar', badge: 'Compras' },
   caja_sin_cierre: { icon: ClockIcon, accionLabel: 'Cerrar caja', badge: 'Corte pendiente' },
   stock_bajo_sin_regla: { icon: BoxesIcon, accionLabel: 'Ver productos', badge: 'Inventario' },
+  sin_stock: { icon: PackageXIcon, accionLabel: 'Ver productos', badge: 'Inventario' },
   faltante_caja: { icon: ClipboardListIcon, accionLabel: 'Revisar', badge: 'Auditoría' },
 }
 
@@ -40,6 +42,7 @@ function construirRuta(alerta: Alerta): string {
     case 'orden_reorden_error':
       return '/ordenes-reorden'
     case 'stock_bajo_sin_regla':
+    case 'sin_stock':
       return '/productos'
     case 'faltante_caja':
       return alerta.auditoria_id !== null ? `/auditoria?highlightId=${alerta.auditoria_id}` : '/auditoria'

@@ -4,8 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { EmptyState, ErrorState, LoadingState } from '@/components/DataStates'
+import { EmptyState } from '@/components/DataStates'
+import { MasterListAside } from '@/components/MasterListAside'
 import { TableCard } from '@/components/TableCard'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
 import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
@@ -123,8 +123,6 @@ export function SucursalesPage() {
   const { data: cajaExcedente } = useCajaDeUsuario(retirandoExcedenteDe?.id)
   const retirarExcedente = useRetirarExcedenteDeUsuario()
 
-  const hayFiltrosActivos = search !== ''
-
   function handleCrearSucursal(values: SucursalFormValues) {
     crearSucursal.mutate(toSucursalPayload(values), { onSuccess: sucursalDialog.closeCreate })
   }
@@ -190,9 +188,9 @@ export function SucursalesPage() {
 
   return (
     <div className="flex w-full flex-col gap-4 p-6 lg:flex-row lg:items-start">
-      <aside className="flex w-full shrink-0 flex-col gap-3 lg:w-72">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-xl font-semibold tracking-tight">Sucursales</h1>
+      <MasterListAside
+        title="Sucursales"
+        headerAction={
           <Dialog open={sucursalDialog.createOpen} onOpenChange={sucursalDialog.setCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm">Nueva sucursal</Button>
@@ -210,54 +208,33 @@ export function SucursalesPage() {
               />
             </DialogContent>
           </Dialog>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Buscar por nombre..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Buscar sucursales"
-          />
-          {hayFiltrosActivos && (
-            <Button variant="ghost" size="sm" onClick={() => setSearch('')}>
-              Limpiar
-            </Button>
-          )}
-        </div>
-
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState />
-        ) : sucursales.length === 0 ? (
-          <EmptyState message="No hay sucursales." bordered={false} />
-        ) : (
-          <nav className="flex flex-col gap-1.5">
-            {sucursales.map((s) => {
-              const resumen = resumenes?.find((r) => r.sucursal_id === s.id)
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSeleccionadaId(s.id)}
-                  className={cn(
-                    'flex flex-col gap-0.5 rounded-lg border p-3 text-left text-sm transition-colors',
-                    s.id === seleccionadaId ? 'border-primary bg-primary/5' : 'hover:bg-muted',
-                  )}
-                >
-                  <span className={cn('font-medium', !s.activo && 'text-muted-foreground')}>{s.nombre}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {resumen
-                      ? `${resumen.equipos_activos} ${resumen.equipos_activos === 1 ? 'caja' : 'cajas'} · ${resumen.cajas_abiertas} ${resumen.cajas_abiertas === 1 ? 'abierta' : 'abiertas'}`
-                      : '—'}
-                  </span>
-                </button>
-              )
-            })}
-          </nav>
-        )}
-      </aside>
+        }
+        search={search}
+        onSearchChange={setSearch}
+        onClearSearch={() => setSearch('')}
+        searchPlaceholder="Buscar por nombre..."
+        searchAriaLabel="Buscar sucursales"
+        isLoading={isLoading}
+        isError={isError}
+        items={sucursales}
+        emptyMessage="No hay sucursales."
+        getId={(s) => s.id}
+        selectedId={seleccionadaId}
+        onSelect={setSeleccionadaId}
+        renderItem={(s) => {
+          const resumen = resumenes?.find((r) => r.sucursal_id === s.id)
+          return (
+            <>
+              <span className={cn('font-medium', !s.activo && 'text-muted-foreground')}>{s.nombre}</span>
+              <span className="text-xs text-muted-foreground">
+                {resumen
+                  ? `${resumen.equipos_activos} ${resumen.equipos_activos === 1 ? 'caja' : 'cajas'} · ${resumen.cajas_abiertas} ${resumen.cajas_abiertas === 1 ? 'abierta' : 'abiertas'}`
+                  : '—'}
+              </span>
+            </>
+          )
+        }}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         {!seleccionada ? (

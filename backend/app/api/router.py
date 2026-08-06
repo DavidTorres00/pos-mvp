@@ -19,6 +19,16 @@ from app.modules.usuarios.router import usuarios_router as usuarios_gestion_rout
 from app.modules.ventas.router import router as ventas_router
 
 api_router = APIRouter(prefix="/api")
+
+
+@api_router.get("/health")
+def health() -> dict[str, str]:
+    """Sondeo de conectividad (frontend: useSaludServidor) — sin auth ni DB de por medio, así el
+    heartbeat detecta un servidor caído sin depender de que la sesión siga siendo válida ni de
+    pagar el costo de un lookup a base de datos en cada tick."""
+    return {"status": "ok"}
+
+
 api_router.include_router(usuarios_router)
 api_router.include_router(usuarios_gestion_router)
 api_router.include_router(auditoria_router)

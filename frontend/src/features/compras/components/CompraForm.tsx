@@ -41,7 +41,7 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   // Fetches the largest page the backend allows (size=100) since estos dropdowns necesitan
   // el catálogo completo, no una porción paginada.
-  const { data: productosData } = useProductos('', 1, 100)
+  const { data: productosData } = useProductos({ q: '' }, 1, 100)
   const productos = productosData?.items ?? []
   const { data: proveedoresData } = useProveedores('', 1, 100)
   const proveedores = proveedoresData?.items.filter((proveedor) => proveedor.activo) ?? []

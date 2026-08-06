@@ -16,9 +16,6 @@ export const ConfiguracionPage = lazy(() =>
   import('@/pages/ConfiguracionPage').then((m) => ({ default: m.ConfiguracionPage })),
 )
 export const ProductosPage = lazy(() => import('@/pages/ProductosPage').then((m) => ({ default: m.ProductosPage })))
-export const CategoriasPage = lazy(() =>
-  import('@/pages/CategoriasPage').then((m) => ({ default: m.CategoriasPage })),
-)
 export const InventarioPage = lazy(() =>
   import('@/pages/InventarioPage').then((m) => ({ default: m.InventarioPage })),
 )

@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { ArrowLeftRightIcon, CheckCircle2Icon, PhoneIcon, ReceiptTextIcon, WalletIcon, XIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  ArrowLeftRightIcon,
+  CheckCircle2Icon,
+  PhoneIcon,
+  ReceiptTextIcon,
+  WalletIcon,
+  XIcon,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,6 +39,11 @@ import { useAuthStore } from '@/stores/authStore'
 interface LineaVenta {
   producto: ProductoConStock
   cantidad: number
+}
+
+interface Aviso {
+  tipo: 'success' | 'error'
+  mensaje: string
 }
 
 // Placeholder de acciones rápidas del kiosko: sin lógica todavía (llegan con OpenPay más
@@ -76,13 +89,14 @@ export function VentaKiosco() {
   const [cierreOpen, setCierreOpen] = useState(false)
   const [cierreResultado, setCierreResultado] = useState<CajaResumen | null>(null)
   const [excedenteOpen, setExcedenteOpen] = useState(false)
-  const [ventaConfirmada, setVentaConfirmada] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<Aviso | null>(null)
   const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
   const skuInputRef = useRef<HTMLInputElement>(null)
   // último comprobante ya mostrado en esta pantalla, para no reconstruirlo dos veces cuando el
   // propio cajero lo retira (voucher ya sale de la respuesta de la mutación al instante)
   const shownVoucherIdRef = useRef<number | null>(null)
   const excedePrevRef = useRef(false)
+  const avisoTimeoutRef = useRef<number | null>(null)
 
   const { data: cajaActual } = useCajaActual()
   const caja = cajaActual?.caja
@@ -104,15 +118,32 @@ export function VentaKiosco() {
     (formaPago !== 'efectivo' || Number(pagoCon || 0) >= total) &&
     !crear.isPending
 
+  function mostrarAviso(nuevo: Aviso) {
+    if (avisoTimeoutRef.current !== null) window.clearTimeout(avisoTimeoutRef.current)
+    setAviso(nuevo)
+    avisoTimeoutRef.current = window.setTimeout(() => setAviso(null), 3000)
+  }
+
   // compartida por el input de SKU/escáner de esta pantalla y por el picker del panel
   // "Productos" (ver agregarProductoRef abajo) — un solo lugar que sabe sumar cantidad si el
-  // producto ya está en la venta.
+  // producto ya está en la venta. El stock es el de la sucursal del cajero (ProductoConStock,
+  // ver docs/BACKEND.md) — bloquear aquí evita que el cajero se entere de la falta de stock
+  // hasta presionar "Cobrar" (el backend sigue siendo el gate real, ver venta_service.crear).
   function agregarLinea(producto: ProductoConStock) {
+    if (producto.stock === 0) {
+      mostrarAviso({ tipo: 'error', mensaje: `${producto.nombre} no tiene stock en esta sucursal.` })
+      return
+    }
     setLineas((prev) => {
       const idx = prev.findIndex((l) => l.producto.id === producto.id)
       if (idx >= 0) {
+        const cantidadNueva = prev[idx].cantidad + 1
+        if (cantidadNueva > producto.stock) {
+          mostrarAviso({ tipo: 'error', mensaje: `Solo hay ${producto.stock} unidades de ${producto.nombre}.` })
+          return prev
+        }
         const next = [...prev]
-        next[idx] = { ...next[idx], cantidad: next[idx].cantidad + 1 }
+        next[idx] = { ...next[idx], cantidad: cantidadNueva }
         return next
       }
       return [...prev, { producto, cantidad: 1 }]
@@ -155,7 +186,17 @@ export function VentaKiosco() {
   }
 
   function handleCantidad(productoId: number, cantidad: number) {
-    setLineas((prev) => prev.map((l) => (l.producto.id === productoId ? { ...l, cantidad: Math.max(1, cantidad || 1) } : l)))
+    setLineas((prev) =>
+      prev.map((l) => {
+        if (l.producto.id !== productoId) return l
+        const solicitada = Math.max(1, cantidad || 1)
+        if (solicitada > l.producto.stock) {
+          mostrarAviso({ tipo: 'error', mensaje: `Solo hay ${l.producto.stock} unidades de ${l.producto.nombre}.` })
+          return { ...l, cantidad: l.producto.stock }
+        }
+        return { ...l, cantidad: solicitada }
+      }),
+    )
   }
 
   function handleQuitar(productoId: number) {
@@ -187,8 +228,7 @@ export function VentaKiosco() {
           // recalculado en el cliente. La impresión de comprobante para el cliente queda fuera
           // de alcance por ahora: será automática cuando exista impresora térmica conectada, no
           // un botón — no tiene sentido simularlo con window.print() mientras tanto.
-          setVentaConfirmada(venta.total)
-          window.setTimeout(() => setVentaConfirmada(null), 3000)
+          mostrarAviso({ tipo: 'success', mensaje: `Venta registrada · ${formatCurrency(venta.total)}` })
         },
       },
     )
@@ -326,11 +366,22 @@ export function VentaKiosco() {
           </form>
 
           <div className="relative flex flex-col rounded-xl border bg-card shadow-sm lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-            {ventaConfirmada && (
+            {aviso && (
               <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center">
-                <div className="flex animate-in items-center gap-2.5 rounded-full border border-success/30 bg-success/10 px-6 py-3 text-lg font-semibold text-success shadow-md fade-in-0 slide-in-from-top-2">
-                  <CheckCircle2Icon className="size-6" />
-                  Venta registrada · {formatCurrency(ventaConfirmada)}
+                <div
+                  className={cn(
+                    'flex animate-in items-center gap-2.5 rounded-full border px-6 py-3 text-lg font-semibold shadow-md fade-in-0 slide-in-from-top-2',
+                    aviso.tipo === 'success'
+                      ? 'border-success/30 bg-success/10 text-success'
+                      : 'border-destructive/30 bg-destructive/10 text-destructive',
+                  )}
+                >
+                  {aviso.tipo === 'success' ? (
+                    <CheckCircle2Icon className="size-6" />
+                  ) : (
+                    <AlertTriangleIcon className="size-6" />
+                  )}
+                  {aviso.mensaje}
                 </div>
               </div>
             )}

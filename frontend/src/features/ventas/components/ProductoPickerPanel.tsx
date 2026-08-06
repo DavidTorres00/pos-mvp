@@ -24,7 +24,7 @@ export function ProductoPickerPanel({ onAgregar, onClose }: ProductoPickerPanelP
   const debouncedSearch = useDebouncedValue(search)
   const { page, size, setPage } = usePagination(10, debouncedSearch)
   // activo: true — el cajero nunca debe ver ni poder agregar un producto dado de baja
-  const { data, isLoading, isError } = useProductos(debouncedSearch, page, size, true)
+  const { data, isLoading, isError } = useProductos({ q: debouncedSearch, activo: true }, page, size)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const productos = data?.items ?? []
   const total = data?.total ?? 0
