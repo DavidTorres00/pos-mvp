@@ -6,19 +6,12 @@
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
-    --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -50,41 +43,41 @@
 }
 
 :root {
-    --background: oklch(0.995 0.002 260);
-    --foreground: oklch(0.19 0.02 260);
+    /* Paleta corporativa MVP POS — 4 colores de marca (Primario/Acento/Fondo/Texto);
+       todo lo demás es alias o derivado, nada de literales duplicados a mano. */
+    --primario: oklch(0.48 0.13 252.5);
+    --acento: oklch(0.62 0.149 251.5);
+    --fondo: oklch(0.95 0.018 245.4);
+    --texto: oklch(0.29 0.083 252.4);
+
+    --background: oklch(0.995 0.004 252);
+    --foreground: var(--texto);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.19 0.02 260);
+    --card-foreground: var(--foreground);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.19 0.02 260);
-    --primary: oklch(0.5 0.17 258);
-    --primary-foreground: oklch(0.98 0.005 260);
-    --secondary: oklch(0.96 0.012 260);
-    --secondary-foreground: oklch(0.28 0.03 260);
-    --muted: oklch(0.965 0.01 260);
-    --muted-foreground: oklch(0.5 0.02 262);
-    --accent: oklch(0.93 0.035 258);
-    --accent-foreground: oklch(0.3 0.06 258);
+    --popover-foreground: var(--foreground);
+    --primary: var(--primario);
+    --primary-foreground: oklch(0.98 0.006 252);
+    --secondary: var(--accent);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--accent);
+    --muted-foreground: oklch(0.48 0.025 252);
+    --accent: var(--fondo);
+    --accent-foreground: var(--foreground);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.98 0.01 27.325);
     --success: oklch(0.6 0.14 155);
     --success-foreground: oklch(0.98 0.01 155);
-    --border: oklch(0.9 0.012 260);
-    --input: oklch(0.9 0.012 260);
-    --ring: oklch(0.58 0.15 258);
-    --chart-1: oklch(0.78 0.12 258);
-    --chart-2: oklch(0.65 0.15 258);
-    --chart-3: oklch(0.52 0.17 258);
-    --chart-4: oklch(0.4 0.15 258);
-    --chart-5: oklch(0.3 0.12 258);
+    --border: oklch(0.9 0.02 250);
+    --input: var(--border);
+    --ring: var(--acento);
     --radius: 0.75rem;
-    --sidebar: oklch(0.99 0.006 260);
-    --sidebar-foreground: oklch(0.19 0.02 260);
-    --sidebar-primary: oklch(0.5 0.17 258);
-    --sidebar-primary-foreground: oklch(0.98 0.005 260);
-    --sidebar-accent: oklch(0.93 0.035 258);
-    --sidebar-accent-foreground: oklch(0.3 0.06 258);
-    --sidebar-border: oklch(0.9 0.012 260);
-    --sidebar-ring: oklch(0.58 0.15 258);
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-accent: var(--accent);
+    --sidebar-accent-foreground: var(--accent-foreground);
+    --sidebar-border: var(--border);
 }
 
 @layer base {
