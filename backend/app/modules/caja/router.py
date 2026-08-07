@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_role
+from app.api.deps import get_current_user, require_role, resolver_usuario_desde_cookie
 from app.api.pagination import ParametrosPaginacion, parametros_paginacion
 from app.core.eventos_caja import eventos_caja
-from app.database.session import get_db
+from app.database.session import SessionLocal, get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.repositories import equipo_repository
 from app.schemas.caja import (
@@ -36,22 +36,35 @@ from app.services.caja_service import (
 
 router = APIRouter(prefix="/caja", tags=["caja"], dependencies=[Depends(get_current_user)])
 
+# Router aparte, sin el `Depends(get_current_user)` de arriba: ese depende de `Depends(get_db)`,
+# cuya sesión FastAPI mantiene abierta hasta que la respuesta *completa* termina de enviarse —
+# para un stream SSE eso es indefinido (horas), así que la sesión quedaba "idle in transaction"
+# todo ese tiempo. Un cliente que se desconecta sin avisar (laptop cerrada, cambio de red) la
+# dejaba huérfana, sin nadie que la cerrara. `/eventos` autentica con su propia sesión de vida
+# corta (cerrada antes de empezar a transmitir) — el resto del stream no vuelve a tocar la DB.
+eventos_router = APIRouter(prefix="/caja", tags=["caja"])
+
 
 @router.get("/actual", response_model=CajaActualOut)
 def actual(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)) -> CajaActualOut:
     return caja_service.obtener_actual(db, usuario.id)
 
 
-@router.get("/eventos")
-async def eventos(request: Request, usuario: Usuario = Depends(get_current_user)) -> StreamingResponse:
+@eventos_router.get("/eventos")
+async def eventos(request: Request) -> StreamingResponse:
     """Server-Sent Events: complementa (no reemplaza) el polling de 15s de `useCajaActual` en
     el frontend — cuando un admin retira el excedente o cierra la caja de este usuario desde
     otra sesión, `caja_service` notifica por aquí para que se entere al instante en vez de
     esperar el próximo ciclo. El payload no importa, es solo una señal de "vuelve a pedir tu
     caja actual" — la única fuente de verdad sigue siendo `GET /caja/actual`."""
+    with SessionLocal() as db:
+        usuario = resolver_usuario_desde_cookie(db, request)
+    if usuario is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales inválidas o expiradas")
+    usuario_id = usuario.id
 
     async def generador():
-        cola = eventos_caja.suscribirse(usuario.id)
+        cola = eventos_caja.suscribirse(usuario_id)
         try:
             while True:
                 if await request.is_disconnected():
@@ -62,7 +75,7 @@ async def eventos(request: Request, usuario: Usuario = Depends(get_current_user)
                 except asyncio.TimeoutError:
                     yield ": keep-alive\n\n"
         finally:
-            eventos_caja.desuscribirse(usuario.id, cola)
+            eventos_caja.desuscribirse(usuario_id, cola)
 
     return StreamingResponse(generador(), media_type="text/event-stream")
 

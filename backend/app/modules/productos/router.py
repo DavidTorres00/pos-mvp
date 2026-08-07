@@ -11,6 +11,7 @@ from app.services import producto_service
 from app.services.producto_service import (
     CategoriaInvalidaError,
     ProductoNoEncontradoError,
+    ProveedorInvalidoError,
     SkuDuplicadoError,
     SkuRequeridoError,
     SubcategoriaInvalidaError,
@@ -25,11 +26,14 @@ def listar(
     q: str | None = None,
     activo: bool | None = None,
     categoria_id: int | None = None,
+    proveedor_id: int | None = None,
     sucursal_id: int = Depends(resolve_sucursal_id),
     paginacion: ParametrosPaginacion = Depends(parametros_paginacion),
     db: Session = Depends(get_db),
 ) -> Pagina[ProductoStockOut]:
-    items, total = producto_service.listar(db, q, activo, categoria_id, sucursal_id, paginacion.page, paginacion.size)
+    items, total = producto_service.listar(
+        db, q, activo, categoria_id, proveedor_id, sucursal_id, paginacion.page, paginacion.size
+    )
     return Pagina(items=items, total=total, page=paginacion.page, size=paginacion.size)
 
 
@@ -44,6 +48,7 @@ def crear(payload: ProductoCreate, db: Session = Depends(get_db), usuario: Usuar
             payload.precio_venta,
             payload.categoria_id,
             payload.subcategoria_id,
+            payload.proveedor_id,
         )
     except SkuDuplicadoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El SKU ya está en uso")
@@ -53,6 +58,8 @@ def crear(payload: ProductoCreate, db: Session = Depends(get_db), usuario: Usuar
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La categoría no existe")
     except SubcategoriaInvalidaError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La subcategoría no existe")
+    except ProveedorInvalidoError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El proveedor no existe")
 
 
 @router.get("/{producto_id}", response_model=ProductoStockOut)
@@ -79,6 +86,7 @@ def actualizar(
             payload.precio_venta,
             payload.categoria_id,
             payload.subcategoria_id,
+            payload.proveedor_id,
         )
     except SkuDuplicadoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El SKU ya está en uso")
@@ -88,6 +96,8 @@ def actualizar(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La subcategoría no existe")
     except ProductoNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    except ProveedorInvalidoError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El proveedor no existe")
 
 
 @router.patch("/{producto_id}/estado", response_model=ProductoOut, dependencies=[solo_admin])

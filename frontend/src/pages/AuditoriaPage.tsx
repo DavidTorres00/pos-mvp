@@ -23,8 +23,6 @@ const ENTIDADES = [
   { value: 'venta', label: 'Ventas' },
   { value: 'compra', label: 'Compras' },
   { value: 'proveedor', label: 'Proveedores' },
-  { value: 'regla_reorden', label: 'Reglas de reorden' },
-  { value: 'orden_reorden', label: 'Órdenes de reorden' },
 ]
 
 const ACCION_LABELS: Record<string, string> = {
@@ -42,16 +40,13 @@ const ACCION_LABELS: Record<string, string> = {
   caja_movimiento_salida: 'Salida de efectivo',
   caja_retiro_excedente: 'Retiro de excedente',
   venta_registrada: 'Venta registrada',
-  compra_registrada: 'Compra registrada',
+  compra_creada: 'Pedido armado',
+  compra_pagada: 'Pedido aprobado y pagado',
+  compra_pago_error: 'Error al pagar un pedido',
+  compra_rechazada: 'Pedido rechazado',
+  compra_recibida: 'Pedido recibido en sucursal',
   proveedor_creado: 'Proveedor creado',
   proveedor_estado_cambiado: 'Cambio de estado de proveedor',
-  regla_reorden_creada: 'Regla de reorden creada',
-  regla_reorden_estado_cambiado: 'Cambio de estado de regla',
-  orden_reorden_disparada: 'Orden de reorden sugerida',
-  orden_reorden_aprobada: 'Orden de reorden aprobada',
-  orden_reorden_rechazada: 'Orden de reorden rechazada',
-  pago_proveedor_aprobado: 'Pago a proveedor realizado',
-  pago_proveedor_error: 'Error al pagar a proveedor',
 }
 
 function formatDetalle(detalle: Record<string, unknown> | null): string {

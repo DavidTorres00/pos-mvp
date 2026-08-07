@@ -7,6 +7,7 @@ export const productoSchema = z
     precio_venta: z.number({ error: 'Ingresa el precio de venta' }).positive('El precio debe ser mayor a 0'),
     categoria_id: z.number().nullable(),
     subcategoria_id: z.number().nullable(),
+    proveedor_id: z.number().nullable(),
   })
   .refine((data) => data.subcategoria_id !== null || !!data.sku, {
     message: 'El SKU es requerido si no eliges una subcategoría',

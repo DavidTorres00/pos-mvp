@@ -3,7 +3,6 @@ import {
   BoxesIcon,
   CheckIcon,
   CircleCheckIcon,
-  ClipboardCheckIcon,
   ClipboardListIcon,
   ClockIcon,
   PackageXIcon,
@@ -18,17 +17,17 @@ import type { Alerta, AlertaTipo } from '@/services/reporteService'
 
 const ALERTA_CONFIG: Record<AlertaTipo, { icon: LucideIcon; accionLabel: string; badge: string }> = {
   caja_excedida: { icon: AlertTriangleIcon, accionLabel: 'Ver cajero', badge: 'Caja' },
-  orden_reorden_pendiente: { icon: ClipboardCheckIcon, accionLabel: 'Aprobar', badge: 'Compras' },
-  orden_reorden_error: { icon: ClipboardCheckIcon, accionLabel: 'Revisar', badge: 'Compras' },
   caja_sin_cierre: { icon: ClockIcon, accionLabel: 'Cerrar caja', badge: 'Corte pendiente' },
-  stock_bajo_sin_regla: { icon: BoxesIcon, accionLabel: 'Ver productos', badge: 'Inventario' },
+  stock_bajo: { icon: BoxesIcon, accionLabel: 'Ver productos', badge: 'Inventario' },
   sin_stock: { icon: PackageXIcon, accionLabel: 'Ver productos', badge: 'Inventario' },
   faltante_caja: { icon: ClipboardListIcon, accionLabel: 'Revisar', badge: 'Auditoría' },
 }
 
-// lleva a la fila exacta (sucursal+caja, o el evento de auditoría) cuando la alerta trae los
-// ids — no solo a la página general, ver `docs/FRONTEND.md`. Las alertas agregadas (reorden,
-// stock bajo sin una sola sucursal) no tienen una fila puntual a la que apuntar.
+// lleva a la fila/sucursal exacta cuando la alerta trae los ids — no solo a la página general,
+// ver `docs/FRONTEND.md`. `stock_bajo`/`sin_stock` siempre traen `sucursal_id` (una alerta por
+// sucursal, ver docs/BACKEND.md) — el `?sucursalId=` precarga esa sucursal en Productos
+// (ProductosPage la captura una vez, igual que SucursalesPage con la suya), para no aterrizar
+// en silencio en la que sea que esté activa en `sucursalActivaStore`.
 function construirRuta(alerta: Alerta): string {
   switch (alerta.tipo) {
     case 'caja_excedida':
@@ -38,12 +37,9 @@ function construirRuta(alerta: Alerta): string {
       if (alerta.equipo_id !== null) params.set('equipoId', String(alerta.equipo_id))
       return `/sucursales?${params.toString()}`
     }
-    case 'orden_reorden_pendiente':
-    case 'orden_reorden_error':
-      return '/ordenes-reorden'
-    case 'stock_bajo_sin_regla':
+    case 'stock_bajo':
     case 'sin_stock':
-      return '/productos'
+      return alerta.sucursal_id !== null ? `/productos?sucursalId=${alerta.sucursal_id}` : '/productos'
     case 'faltante_caja':
       return alerta.auditoria_id !== null ? `/auditoria?highlightId=${alerta.auditoria_id}` : '/auditoria'
   }
@@ -63,9 +59,7 @@ export function AtencionFeed({ alertas, onAcusar, acusandoAuditoriaId = null }: 
       <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center text-sm">
         <CircleCheckIcon className="size-6 text-success" />
         <p className="font-medium text-foreground">Todo en orden</p>
-        <p className="text-muted-foreground">
-          Ninguna caja excedida, ninguna orden pendiente y ningún producto bajo umbral.
-        </p>
+        <p className="text-muted-foreground">Ninguna caja excedida y ningún producto bajo umbral.</p>
       </div>
     )
   }

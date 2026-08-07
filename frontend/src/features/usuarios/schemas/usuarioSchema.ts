@@ -14,3 +14,9 @@ export const usuarioCreateSchema = z
   })
 
 export type UsuarioCreateFormValues = z.infer<typeof usuarioCreateSchema>
+
+export const usuarioNombreSchema = z.object({
+  nombre: z.string().min(1, 'El nombre es requerido'),
+})
+
+export type UsuarioNombreFormValues = z.infer<typeof usuarioNombreSchema>

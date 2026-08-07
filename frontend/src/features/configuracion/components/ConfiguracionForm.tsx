@@ -37,31 +37,14 @@ export function ConfiguracionForm({ defaultValues, isPending, errorMessage, onSu
       </p>
 
       <FormField
-        label="Tope de gasto por orden a proveedor (OpenPay)"
-        type="number"
-        placeholder="Sin tope"
-        register={register('openpay_tope_por_orden')}
-        error={errors.openpay_tope_por_orden}
-      />
-
-      <FormField
-        label="Tope de gasto diario a proveedores (OpenPay)"
-        type="number"
-        placeholder="Sin tope"
-        register={register('openpay_tope_diario')}
-        error={errors.openpay_tope_diario}
-      />
-
-      <FormField
-        label="Umbral de stock bajo (sin regla de reorden)"
+        label="Umbral de stock bajo"
         type="number"
         placeholder="Desactivado"
         register={register('umbral_stock_bajo_default')}
         error={errors.umbral_stock_bajo_default}
       />
       <p className="-mt-2 text-xs text-muted-foreground">
-        Avisa en el Dashboard cuando un producto cae en o debajo de esta cantidad y no tiene su propia regla de
-        reorden configurada.
+        Avisa en el Dashboard cuando un producto cae en o debajo de esta cantidad.
       </p>
 
       {errorMessage && (

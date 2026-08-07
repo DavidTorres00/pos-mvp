@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.proveedor import Proveedor
 from app.repositories import proveedor_repository
+from app.schemas.proveedor import ProveedorResumenOut
 from app.services import auditoria_service
 
 
@@ -14,15 +15,38 @@ class ProveedorNoEncontradoError(Exception):
     pass
 
 
-def listar(db: Session, q: str | None, page: int, size: int) -> tuple[list[Proveedor], int]:
-    return proveedor_repository.get_all(db, q, page, size)
+def _a_out(proveedor: Proveedor, conteo: tuple[int, int]) -> ProveedorResumenOut:
+    total_productos, pedidos_pendientes = conteo
+    return ProveedorResumenOut(
+        id=proveedor.id,
+        nombre=proveedor.nombre,
+        contacto=proveedor.contacto,
+        telefono=proveedor.telefono,
+        email=proveedor.email,
+        clabe=proveedor.clabe,
+        activo=proveedor.activo,
+        total_productos=total_productos,
+        pedidos_pendientes=pedidos_pendientes,
+    )
 
 
-def obtener(db: Session, proveedor_id: int) -> Proveedor:
+def _a_out_individual(db: Session, proveedor: Proveedor) -> ProveedorResumenOut:
+    conteos = proveedor_repository.get_conteos(db, [proveedor.id])
+    return _a_out(proveedor, conteos.get(proveedor.id, (0, 0)))
+
+
+def listar(db: Session, q: str | None, page: int, size: int) -> tuple[list[ProveedorResumenOut], int]:
+    proveedores, total = proveedor_repository.get_all(db, q, page, size)
+    conteos = proveedor_repository.get_conteos(db, [p.id for p in proveedores])
+    items = [_a_out(p, conteos.get(p.id, (0, 0))) for p in proveedores]
+    return items, total
+
+
+def obtener(db: Session, proveedor_id: int) -> ProveedorResumenOut:
     proveedor = proveedor_repository.get_by_id(db, proveedor_id)
     if proveedor is None:
         raise ProveedorNoEncontradoError(proveedor_id)
-    return proveedor
+    return _a_out_individual(db, proveedor)
 
 
 def crear(
@@ -33,7 +57,7 @@ def crear(
     telefono: str | None,
     email: str | None,
     clabe: str | None,
-) -> Proveedor:
+) -> ProveedorResumenOut:
     if proveedor_repository.get_by_nombre(db, nombre) is not None:
         raise NombreDuplicadoError(nombre)
     proveedor = Proveedor(nombre=nombre, contacto=contacto, telefono=telefono, email=email, clabe=clabe)
@@ -43,7 +67,7 @@ def crear(
     except IntegrityError:
         raise NombreDuplicadoError(nombre)
     auditoria_service.registrar(db, usuario_id, "proveedor_creado", "proveedor", proveedor.id, {"nombre": nombre})
-    return proveedor
+    return _a_out(proveedor, (0, 0))
 
 
 def actualizar(
@@ -54,7 +78,7 @@ def actualizar(
     telefono: str | None,
     email: str | None,
     clabe: str | None,
-) -> Proveedor:
+) -> ProveedorResumenOut:
     proveedor = proveedor_repository.get_by_id(db, proveedor_id)
     if proveedor is None:
         raise ProveedorNoEncontradoError(proveedor_id)
@@ -70,12 +94,13 @@ def actualizar(
     proveedor.clabe = clabe
     try:
         with db.begin_nested():
-            return proveedor_repository.save(db, proveedor)
+            proveedor = proveedor_repository.save(db, proveedor)
     except IntegrityError:
         raise NombreDuplicadoError(nombre)
+    return _a_out_individual(db, proveedor)
 
 
-def cambiar_estado(db: Session, usuario_id: int, proveedor_id: int, activo: bool) -> Proveedor:
+def cambiar_estado(db: Session, usuario_id: int, proveedor_id: int, activo: bool) -> ProveedorResumenOut:
     proveedor = proveedor_repository.get_by_id(db, proveedor_id)
     if proveedor is None:
         raise ProveedorNoEncontradoError(proveedor_id)
@@ -91,4 +116,4 @@ def cambiar_estado(db: Session, usuario_id: int, proveedor_id: int, activo: bool
             proveedor.id,
             {"activo_anterior": activo_anterior, "activo_nuevo": activo},
         )
-    return proveedor
+    return _a_out_individual(db, proveedor)

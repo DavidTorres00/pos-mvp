@@ -12,6 +12,13 @@ import { sumLineTotals } from '@/lib/lineItems'
 import { numeroDesdeTexto } from '@/lib/numericInput'
 
 interface CompraFormProps {
+  // fijo cuando el pedido se arma desde dentro del hub de un proveedor (ver ProveedoresPage,
+  // docs/FRONTEND.md) — el select de proveedor se oculta, ya no hay que elegirlo
+  proveedorFijo?: { id: number; nombre: string }
+  // productos preseleccionados (bulk "Preparar pedido" desde la tabla de productos del
+  // proveedor) — precarga una línea por producto, cantidad/costo en blanco para que el admin
+  // los confirme, igual que una línea agregada a mano
+  defaultProductoIds?: number[]
   isPending: boolean
   errorMessage?: string
   onSubmit: (values: CompraFormValues) => void
@@ -28,7 +35,7 @@ function LineaTotal({ control, index }: { control: Control<CompraFormValues>; in
   )
 }
 
-export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProps) {
+export function CompraForm({ proveedorFijo, defaultProductoIds, isPending, errorMessage, onSubmit }: CompraFormProps) {
   const {
     register,
     handleSubmit,
@@ -36,7 +43,13 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
     formState: { errors },
   } = useForm<CompraFormValues>({
     resolver: zodResolver(compraSchema),
-    defaultValues: { proveedor_id: null, items: [{ producto_id: null, cantidad: 1, costo_unitario: 0 }] },
+    defaultValues: {
+      proveedor_id: proveedorFijo?.id ?? null,
+      items:
+        defaultProductoIds && defaultProductoIds.length > 0
+          ? defaultProductoIds.map((producto_id) => ({ producto_id, cantidad: 1, costo_unitario: 0 }))
+          : [{ producto_id: null, cantidad: 1, costo_unitario: 0 }],
+    },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   // Fetches the largest page the backend allows (size=100) since estos dropdowns necesitan
@@ -53,15 +66,21 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-      <SelectField
-        control={control}
-        name="proveedor_id"
-        label="Proveedor"
-        placeholder="Selecciona un proveedor"
-        options={proveedorOptions}
-        error={errors.proveedor_id}
-        parse={(value) => Number(value)}
-      />
+      {proveedorFijo ? (
+        <p className="text-sm">
+          Proveedor: <span className="font-medium">{proveedorFijo.nombre}</span>
+        </p>
+      ) : (
+        <SelectField
+          control={control}
+          name="proveedor_id"
+          label="Proveedor"
+          placeholder="Selecciona un proveedor"
+          options={proveedorOptions}
+          error={errors.proveedor_id}
+          parse={(value) => Number(value)}
+        />
+      )}
 
       <div className="flex flex-col gap-3">
         <span className="text-sm leading-none font-medium">Productos</span>
@@ -130,7 +149,7 @@ export function CompraForm({ isPending, errorMessage, onSubmit }: CompraFormProp
       )}
 
       <Button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : 'Registrar compra'}
+        {isPending ? 'Guardando...' : 'Guardar pedido'}
       </Button>
     </form>
   )

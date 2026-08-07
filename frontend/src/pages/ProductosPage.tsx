@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/DataStates'
+import { EntityActionsMenu } from '@/components/EntityActionsMenu'
 import { MasterListAside } from '@/components/MasterListAside'
 import { SucursalActivaSelector } from '@/components/SucursalActivaSelector'
 import { TableCard } from '@/components/TableCard'
@@ -31,21 +34,39 @@ import { cn } from '@/lib/utils'
 import type { CategoriaResumen } from '@/services/categoriaService'
 import type { Producto } from '@/services/productoService'
 import { useAuthStore } from '@/stores/authStore'
+import { useSucursalActivaStore } from '@/stores/sucursalActivaStore'
 
 export function ProductosPage() {
   const isAdmin = useAuthStore((state) => state.usuario?.role === 'admin')
+
+  // llegada desde una alerta de stock del Dashboard ("Ver productos"): precarga esa sucursal en
+  // el selector en vez de aterrizar en silencio en la que sea que estuviera activa — se captura
+  // una sola vez al montar y se limpia la URL, mismo patrón que sucursalId/equipoId en
+  // SucursalesPage (ver docs/FRONTEND.md)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const setSucursalActiva = useSucursalActivaStore((state) => state.setSucursalId)
+  useEffect(() => {
+    const sucursalIdParam = searchParams.get('sucursalId')
+    if (sucursalIdParam) {
+      setSucursalActiva(Number(sucursalIdParam))
+      setSearchParams({}, { replace: true })
+    }
+    // solo al montar: captura el estado inicial de la URL una vez, después la URL queda limpia
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const [categoriaSearch, setCategoriaSearch] = useState('')
   const debouncedCategoriaSearch = useDebouncedValue(categoriaSearch)
   // `null` = "sin elección explícita todavía" — la categoría efectiva cae a la primera de la
   // lista sin necesidad de sincronizar ese default con un efecto aparte
   const [categoriaElegidaId, setCategoriaElegidaId] = useState<number | null>(null)
+  const sucursalActivaId = useSucursalActivaStore((state) => state.sucursalId)
 
   const {
     data: categoriasData,
     isLoading: isLoadingCategorias,
     isError: isErrorCategorias,
-  } = useCategorias(debouncedCategoriaSearch, 1, 100)
+  } = useCategorias(debouncedCategoriaSearch, sucursalActivaId, 1, 100)
   const categorias = categoriasData?.items ?? []
   const seleccionadaId = categoriaElegidaId ?? categorias[0]?.id ?? null
   const seleccionada = categorias.find((c) => c.id === seleccionadaId) ?? null
@@ -139,15 +160,40 @@ export function ProductosPage() {
         getId={(c) => c.id}
         selectedId={seleccionadaId}
         onSelect={setCategoriaElegidaId}
-        renderItem={(c) => (
-          <>
-            <span className={cn('font-medium', !c.activo && 'text-muted-foreground')}>{c.nombre}</span>
-            <span className="text-xs text-muted-foreground">
-              {c.total_subcategorias} {c.total_subcategorias === 1 ? 'subcategoría' : 'subcategorías'} ·{' '}
-              {c.total_productos} {c.total_productos === 1 ? 'producto' : 'productos'}
-            </span>
-          </>
+        isItemAlert={(c) => c.productos_sin_stock > 0 || c.productos_stock_bajo > 0}
+        renderItemActions={(c) => (
+          <EntityActionsMenu
+            triggerSize="icon-sm"
+            extraActions={<DropdownMenuItem onSelect={() => setSubcategoriasDe(c)}>Subcategorías</DropdownMenuItem>}
+            onEdit={() => categoriaDialog.edit(c)}
+            activo={c.activo}
+            onToggleEstado={() => setEstadoCategoria.mutate({ id: c.id, activo: !c.activo })}
+            toggleDialogTitle={c.activo ? `¿Desactivar ${c.nombre}?` : `¿Activar ${c.nombre}?`}
+            toggleDialogDescription={
+              c.activo
+                ? 'Sus productos y subcategorías seguirán existiendo, pero deja de estar disponible para clasificar productos nuevos.'
+                : 'Volverá a estar disponible para clasificar productos y subcategorías.'
+            }
+          />
         )}
+        renderItem={(c) => {
+          const detalleAlerta = [
+            c.productos_sin_stock > 0 && `${c.productos_sin_stock} sin stock`,
+            c.productos_stock_bajo > 0 && `${c.productos_stock_bajo} stock bajo`,
+          ]
+            .filter(Boolean)
+            .join(' · ')
+          return (
+            <>
+              <span className={cn('font-medium', !c.activo && 'text-muted-foreground')}>{c.nombre}</span>
+              <span className="text-xs text-muted-foreground">
+                {c.total_subcategorias} {c.total_subcategorias === 1 ? 'subcategoría' : 'subcategorías'} ·{' '}
+                {c.total_productos} {c.total_productos === 1 ? 'producto' : 'productos'}
+              </span>
+              {detalleAlerta && <span className="text-xs font-medium text-destructive">{detalleAlerta}</span>}
+            </>
+          )
+        }}
       />
 
       <div className="flex min-w-0 flex-1 flex-col gap-4">
@@ -155,12 +201,7 @@ export function ProductosPage() {
           <EmptyState message="Selecciona una categoría para ver su detalle." />
         ) : (
           <>
-            <CategoriaHeaderCard
-              categoria={seleccionada}
-              onEdit={() => categoriaDialog.edit(seleccionada)}
-              onToggleEstado={() => setEstadoCategoria.mutate({ id: seleccionada.id, activo: !seleccionada.activo })}
-              onManageSubcategorias={() => setSubcategoriasDe(seleccionada)}
-            />
+            <CategoriaHeaderCard categoria={seleccionada} sucursalSelector={<SucursalActivaSelector />} />
 
             <CategoriaStatsRow
               totalSubcategorias={seleccionada.total_subcategorias}
@@ -171,7 +212,6 @@ export function ProductosPage() {
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <h2 className="text-sm font-semibold text-muted-foreground">Productos de {seleccionada.nombre}</h2>
                 <div className="flex flex-wrap items-end gap-3">
-                  <SucursalActivaSelector />
                   <Dialog open={productoDialog.createOpen} onOpenChange={productoDialog.setCreateOpen}>
                     <DialogTrigger asChild>
                       <Button size="sm">Nuevo producto</Button>
@@ -268,6 +308,7 @@ export function ProductosPage() {
                 precio_venta: Number(productoDialog.editing.precio_venta),
                 categoria_id: productoDialog.editing.categoria_id,
                 subcategoria_id: productoDialog.editing.subcategoria_id,
+                proveedor_id: productoDialog.editing.proveedor_id,
               }}
               isPending={updateProducto.isPending}
               errorMessage={

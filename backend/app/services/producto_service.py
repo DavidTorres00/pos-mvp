@@ -5,7 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.models.producto import Producto
 from app.models.subcategoria import Subcategoria
-from app.repositories import categoria_repository, producto_repository, stock_sucursal_repository, subcategoria_repository
+from app.repositories import (
+    categoria_repository,
+    configuracion_repository,
+    producto_repository,
+    proveedor_repository,
+    stock_sucursal_repository,
+    subcategoria_repository,
+)
 from app.schemas.producto import ProductoOut, ProductoStockOut
 from app.services import auditoria_service
 
@@ -30,9 +37,18 @@ class SubcategoriaInvalidaError(Exception):
     pass
 
 
+class ProveedorInvalidoError(Exception):
+    pass
+
+
 def _validar_categoria(db: Session, categoria_id: int | None) -> None:
     if categoria_id is not None and categoria_repository.get_by_id(db, categoria_id) is None:
         raise CategoriaInvalidaError(categoria_id)
+
+
+def _validar_proveedor(db: Session, proveedor_id: int | None) -> None:
+    if proveedor_id is not None and proveedor_repository.get_by_id(db, proveedor_id) is None:
+        raise ProveedorInvalidoError(proveedor_id)
 
 
 def _obtener_subcategoria(db: Session, subcategoria_id: int) -> Subcategoria:
@@ -62,13 +78,16 @@ def listar(
     q: str | None,
     activo: bool | None,
     categoria_id: int | None,
+    proveedor_id: int | None,
     sucursal_id: int,
     page: int,
     size: int,
 ) -> tuple[list[ProductoStockOut], int]:
-    productos, total = producto_repository.get_all(db, q, activo, categoria_id, page, size)
-    cantidades = stock_sucursal_repository.get_cantidades(db, [p.id for p in productos], sucursal_id)
-    items = [_a_stock_out(p, cantidades.get(p.id, 0)) for p in productos]
+    umbral_stock_bajo = configuracion_repository.get(db).umbral_stock_bajo_default
+    filas, total = producto_repository.get_all(
+        db, q, activo, categoria_id, proveedor_id, sucursal_id, umbral_stock_bajo, page, size
+    )
+    items = [_a_stock_out(producto, cantidad or 0) for producto, cantidad in filas]
     return items, total
 
 
@@ -88,6 +107,7 @@ def crear(
     precio_venta: Decimal,
     categoria_id: int | None = None,
     subcategoria_id: int | None = None,
+    proveedor_id: int | None = None,
 ) -> Producto:
     if subcategoria_id is not None:
         subcategoria = _obtener_subcategoria(db, subcategoria_id)
@@ -99,9 +119,15 @@ def crear(
         if producto_repository.get_by_sku(db, sku) is not None:
             raise SkuDuplicadoError(sku)
         _validar_categoria(db, categoria_id)
+    _validar_proveedor(db, proveedor_id)
 
     producto = Producto(
-        nombre=nombre, sku=sku, precio_venta=precio_venta, categoria_id=categoria_id, subcategoria_id=subcategoria_id
+        nombre=nombre,
+        sku=sku,
+        precio_venta=precio_venta,
+        categoria_id=categoria_id,
+        subcategoria_id=subcategoria_id,
+        proveedor_id=proveedor_id,
     )
     try:
         with db.begin_nested():
@@ -123,6 +149,7 @@ def actualizar(
     precio_venta: Decimal,
     categoria_id: int | None = None,
     subcategoria_id: int | None = None,
+    proveedor_id: int | None = None,
 ) -> Producto:
     producto = producto_repository.get_by_id(db, producto_id)
     if producto is None:
@@ -135,6 +162,7 @@ def actualizar(
         categoria_id = _obtener_subcategoria(db, subcategoria_id).categoria_id
     else:
         _validar_categoria(db, categoria_id)
+    _validar_proveedor(db, proveedor_id)
 
     precio_anterior = producto.precio_venta
     producto.nombre = nombre
@@ -142,6 +170,7 @@ def actualizar(
     producto.precio_venta = precio_venta
     producto.categoria_id = categoria_id
     producto.subcategoria_id = subcategoria_id
+    producto.proveedor_id = proveedor_id
     try:
         with db.begin_nested():
             producto = producto_repository.save(db, producto)

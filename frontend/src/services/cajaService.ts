@@ -7,6 +7,7 @@ export interface Caja {
   equipo_id: number
   equipo_nombre: string
   sucursal_nombre: string
+  sucursal_direccion: string | null
   monto_inicial: string
   monto_final: string | null
   abierta: boolean
@@ -28,6 +29,7 @@ export interface VoucherRetiro {
   cajero: string
   autorizado_por: string
   sucursal_nombre: string
+  sucursal_direccion: string | null
   equipo_nombre: string
   fecha: string
   monto_retirado: string

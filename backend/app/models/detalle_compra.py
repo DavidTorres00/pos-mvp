@@ -17,6 +17,9 @@ class DetalleCompra(Base):
     cantidad: Mapped[int] = mapped_column(Integer, nullable=False)
     costo_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     subtotal: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # nulo hasta que la compra se recibe — puede diferir de `cantidad` (lo pedido) si el
+    # proveedor entregó de más/de menos; es lo que de verdad se suma a Inventario al recibir
+    cantidad_recibida: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     compra: Mapped[Compra] = relationship(back_populates="items")
     producto: Mapped[Producto] = relationship(lazy="joined")

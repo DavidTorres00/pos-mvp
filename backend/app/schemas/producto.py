@@ -3,6 +3,7 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.categoria import CategoriaOut
+from app.schemas.proveedor import ProveedorOut
 from app.schemas.subcategoria import SubcategoriaOut
 
 
@@ -12,6 +13,7 @@ class ProductoCreate(BaseModel):
     precio_venta: Decimal = Field(gt=0)
     categoria_id: int | None = None
     subcategoria_id: int | None = None
+    proveedor_id: int | None = None
 
 
 class ProductoUpdate(BaseModel):
@@ -20,6 +22,7 @@ class ProductoUpdate(BaseModel):
     precio_venta: Decimal = Field(gt=0)
     categoria_id: int | None = None
     subcategoria_id: int | None = None
+    proveedor_id: int | None = None
 
 
 class ProductoEstado(BaseModel):
@@ -28,7 +31,7 @@ class ProductoEstado(BaseModel):
 
 class ProductoOut(BaseModel):
     """Catálogo puro (sin cantidad) — el stock ya no vive en Producto, es por sucursal. Usado tal
-    cual para referencias anidadas (item de compra, movimiento, regla/orden de reorden)."""
+    cual para referencias anidadas (item de compra, movimiento de inventario)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,6 +44,8 @@ class ProductoOut(BaseModel):
     categoria: CategoriaOut | None
     subcategoria_id: int | None
     subcategoria: SubcategoriaOut | None
+    proveedor_id: int | None
+    proveedor: ProveedorOut | None
 
 
 class ProductoStockOut(ProductoOut):

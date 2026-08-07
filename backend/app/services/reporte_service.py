@@ -4,7 +4,6 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.core.tiempo import hoy_negocio
-from app.models.orden_reorden import EstadoOrdenReorden
 from app.models.sucursal import Sucursal
 from app.repositories import (
     alerta_acuse_repository,
@@ -12,7 +11,6 @@ from app.repositories import (
     caja_repository,
     configuracion_repository,
     equipo_repository,
-    orden_reorden_repository,
     reporte_repository,
     sucursal_repository,
     usuario_repository,
@@ -22,8 +20,8 @@ from app.schemas.reporte import AlertaOut, SucursalResumenOut, VentasDiaOut, Ven
 from app.services import caja_service
 
 # únicos tipos de alerta basados en un hecho histórico inmutable — las demás (caja_excedida,
-# caja_sin_cierre, orden_reorden_*, stock_bajo_sin_regla, sin_stock) describen una condición viva
-# que se resuelve sola, acusarlas a mano solo escondería un problema que sigue ahí
+# caja_sin_cierre, stock_bajo, sin_stock) describen una condición viva que se resuelve sola,
+# acusarlas a mano solo escondería un problema que sigue ahí
 TIPOS_ACUSABLES = {"faltante_caja"}
 
 HORAS_CAJA_SIN_CIERRE = 24
@@ -183,47 +181,33 @@ def _alertas_cajas_sin_cierre(cajas: list) -> list[AlertaOut]:
     return alertas
 
 
-def _alertas_reorden(db: Session) -> list[AlertaOut]:
-    ordenes = orden_reorden_repository.get_pendientes_y_error(db)
+def _alertas_stock_bajo(db: Session) -> list[AlertaOut]:
+    """Una alerta por sucursal afectada, nunca una sola mezclando todas — una alerta "todas las
+    sucursales" no le dice al admin a cuál ir a resolver, y el link de 'Ver productos' del
+    frontend solo puede aterrizar en una sucursal a la vez de todos modos (la que esté activa en
+    `sucursalActivaStore`)."""
+    umbral = configuracion_repository.get(db).umbral_stock_bajo_default
+    if umbral is None:
+        return []
+    bajos = reporte_repository.productos_bajo_umbral(db, umbral)
+    if not bajos:
+        return []
+    conteo_por_sucursal: dict[int, int] = {}
+    for _, stock in bajos:
+        conteo_por_sucursal[stock.sucursal_id] = conteo_por_sucursal.get(stock.sucursal_id, 0) + 1
     alertas = []
-
-    pendientes = [o for o in ordenes if o.estado == EstadoOrdenReorden.PENDIENTE]
-    if pendientes:
-        total = sum((o.monto_estimado for o in pendientes), Decimal("0"))
-        n_proveedores = len({o.proveedor_id for o in pendientes})
+    for sucursal_id, cantidad in conteo_por_sucursal.items():
+        sucursal = sucursal_repository.get_by_id(db, sucursal_id)
         alertas.append(
             AlertaOut(
-                tipo="orden_reorden_pendiente",
-                titulo=(
-                    f"{len(pendientes)} {'orden de reorden esperando' if len(pendientes) == 1 else 'órdenes de reorden esperando'} aprobación"
-                ),
-                descripcion=(
-                    f"Total sugerido ${total:,.2f} a {n_proveedores} "
-                    f"{'proveedor' if n_proveedores == 1 else 'proveedores'}."
-                ),
-                sucursal_nombre=None,
-                cantidad=len(pendientes),
-                # la más antigua marca la urgencia real del grupo, no la más reciente
-                created_at=min(o.created_at for o in pendientes),
-                # agregado sobre potencialmente varias sucursales/proveedores — no hay una sola
-                # fila a la que apuntar, el link va a la lista general de Órdenes de reorden
-                sucursal_id=None,
-                equipo_id=None,
-                auditoria_id=None,
-            )
-        )
-
-    errores = [o for o in ordenes if o.estado == EstadoOrdenReorden.ERROR]
-    if errores:
-        alertas.append(
-            AlertaOut(
-                tipo="orden_reorden_error",
-                titulo=f"{len(errores)} {'orden' if len(errores) == 1 else 'órdenes'} de reorden con error de pago",
-                descripcion="Revisa el mensaje de OpenPay en cada una y decide si reintentar.",
-                sucursal_nombre=None,
-                cantidad=len(errores),
-                created_at=min(o.created_at for o in errores),
-                sucursal_id=None,
+                tipo="stock_bajo",
+                titulo=f"{cantidad} {'producto' if cantidad == 1 else 'productos'} con stock bajo",
+                descripcion=f"En o debajo de {umbral} unidades — conviene preparar un pedido a su proveedor.",
+                sucursal_nombre=sucursal.nombre if sucursal is not None else None,
+                cantidad=cantidad,
+                # es un corte del inventario ahora mismo, no un evento con fecha propia
+                created_at=None,
+                sucursal_id=sucursal_id,
                 equipo_id=None,
                 auditoria_id=None,
             )
@@ -231,71 +215,27 @@ def _alertas_reorden(db: Session) -> list[AlertaOut]:
     return alertas
 
 
-def _alertas_stock_bajo_sin_regla(db: Session) -> list[AlertaOut]:
-    umbral = configuracion_repository.get(db).umbral_stock_bajo_default
-    if umbral is None:
-        return []
-    bajos = reporte_repository.productos_bajo_umbral_sin_regla(db, umbral)
-    if not bajos:
-        return []
-    sucursales_afectadas = {stock.sucursal_id for _, stock in bajos}
-    sucursal_nombre = None
-    sucursal_id = None
-    if len(sucursales_afectadas) == 1:
-        sucursal_id = next(iter(sucursales_afectadas))
-        sucursal = sucursal_repository.get_by_id(db, sucursal_id)
-        sucursal_nombre = sucursal.nombre if sucursal is not None else None
-    return [
-        AlertaOut(
-            tipo="stock_bajo_sin_regla",
-            titulo=f"{len(bajos)} {'producto' if len(bajos) == 1 else 'productos'} con stock bajo sin regla de reorden",
-            descripcion=(
-                f"En o debajo de {umbral} unidades y sin regla de reorden configurada: no se generará ninguna "
-                "sugerencia de compra automáticamente."
-            ),
-            sucursal_nombre=sucursal_nombre,
-            cantidad=len(bajos),
-            # es un corte del inventario ahora mismo, no un evento con fecha propia
-            created_at=None,
-            sucursal_id=sucursal_id,
-            equipo_id=None,
-            auditoria_id=None,
-        )
-    ]
-
-
 def _alertas_sin_stock(db: Session, sucursales_activas: list[Sucursal]) -> list[AlertaOut]:
+    """Una alerta por sucursal afectada — mismo criterio que `_alertas_stock_bajo`."""
     total_productos = reporte_repository.total_productos_activos(db)
     if total_productos == 0:
         return []
     con_stock_por_sucursal = reporte_repository.conteo_con_stock_por_sucursal(db)
-    afectadas = [
-        (sucursal, cantidad)
-        for sucursal in sucursales_activas
-        if (cantidad := total_productos - con_stock_por_sucursal.get(sucursal.id, 0)) > 0
-    ]
-    if not afectadas:
-        return []
-    total = sum(cantidad for _, cantidad in afectadas)
-    sucursal_id = None
-    sucursal_nombre = None
-    if len(afectadas) == 1:
-        sucursal, _ = afectadas[0]
-        sucursal_id = sucursal.id
-        sucursal_nombre = sucursal.nombre
     return [
         AlertaOut(
             tipo="sin_stock",
-            titulo=f"{total} {'producto' if total == 1 else 'productos'} sin stock",
+            titulo=f"{cantidad} {'producto' if cantidad == 1 else 'productos'} sin stock",
             descripcion="Sin unidades disponibles para vender hasta que se registre una entrada de inventario.",
-            sucursal_nombre=sucursal_nombre,
-            cantidad=total,
+            sucursal_nombre=sucursal.nombre,
+            cantidad=cantidad,
             # es un corte del inventario ahora mismo, no un evento con fecha propia
             created_at=None,
-            sucursal_id=sucursal_id,
+            sucursal_id=sucursal.id,
             equipo_id=None,
             auditoria_id=None,
         )
+        for sucursal in sucursales_activas
+        if (cantidad := total_productos - con_stock_por_sucursal.get(sucursal.id, 0)) > 0
     ]
 
 
@@ -344,9 +284,8 @@ def atencion(db: Session) -> list[AlertaOut]:
 
     alertas: list[AlertaOut] = []
     alertas += _alertas_cajas_excedidas(db, resumenes, _meta_por_equipo(db, sucursales_activas))
-    alertas += _alertas_reorden(db)
     alertas += _alertas_cajas_sin_cierre(cajas)
-    alertas += _alertas_stock_bajo_sin_regla(db)
+    alertas += _alertas_stock_bajo(db)
     alertas += _alertas_sin_stock(db, sucursales_activas)
     alertas += _alertas_faltante_caja(db)
     return alertas

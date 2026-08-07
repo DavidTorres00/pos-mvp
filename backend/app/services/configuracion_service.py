@@ -15,20 +15,14 @@ def actualizar(
     db: Session,
     usuario_id: int,
     limite_efectivo_caja: Decimal | None,
-    openpay_tope_por_orden: Decimal | None,
-    openpay_tope_diario: Decimal | None,
     umbral_stock_bajo_default: int | None,
 ) -> ConfiguracionNegocio:
     configuracion = configuracion_repository.get(db)
     anterior = {
         "limite_efectivo_caja": configuracion.limite_efectivo_caja,
-        "openpay_tope_por_orden": configuracion.openpay_tope_por_orden,
-        "openpay_tope_diario": configuracion.openpay_tope_diario,
         "umbral_stock_bajo_default": configuracion.umbral_stock_bajo_default,
     }
     configuracion.limite_efectivo_caja = limite_efectivo_caja
-    configuracion.openpay_tope_por_orden = openpay_tope_por_orden
-    configuracion.openpay_tope_diario = openpay_tope_diario
     configuracion.umbral_stock_bajo_default = umbral_stock_bajo_default
     configuracion = configuracion_repository.save(db, configuracion)
     auditoria_service.registrar(
@@ -41,8 +35,6 @@ def actualizar(
             "anterior": {k: str(v) if v is not None else None for k, v in anterior.items()},
             "nuevo": {
                 "limite_efectivo_caja": str(limite_efectivo_caja) if limite_efectivo_caja is not None else None,
-                "openpay_tope_por_orden": str(openpay_tope_por_orden) if openpay_tope_por_orden is not None else None,
-                "openpay_tope_diario": str(openpay_tope_diario) if openpay_tope_diario is not None else None,
                 "umbral_stock_bajo_default": str(umbral_stock_bajo_default)
                 if umbral_stock_bajo_default is not None
                 else None,

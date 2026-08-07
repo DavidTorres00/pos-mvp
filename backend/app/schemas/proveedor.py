@@ -31,3 +31,12 @@ class ProveedorOut(BaseModel):
     email: str | None
     clabe: str | None
     activo: bool
+
+
+class ProveedorResumenOut(ProveedorOut):
+    """ProveedorOut + conteos — para el hub de Proveedores (maestro-detalle, ver
+    docs/FRONTEND.md). Mismo patrón que CategoriaResumenOut/ProductoStockOut: el schema base
+    queda puro para cuando viaja embebido (ProductoOut.proveedor, CompraOut.proveedor)."""
+
+    total_productos: int
+    pedidos_pendientes: int

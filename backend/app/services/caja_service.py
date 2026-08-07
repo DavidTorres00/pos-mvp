@@ -151,6 +151,7 @@ def _voucher_desde_movimiento(movimiento: MovimientoCaja, caja: CajaSesion) -> V
         # el frontend decide si vale la pena mostrar esta fila comparándola contra `cajero`
         autorizado_por=movimiento.usuario_nombre,
         sucursal_nombre=caja.sucursal_nombre,
+        sucursal_direccion=caja.sucursal_direccion,
         equipo_nombre=caja.equipo_nombre,
         fecha=movimiento.created_at,
         monto_retirado=movimiento.monto,

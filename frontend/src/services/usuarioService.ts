@@ -40,6 +40,11 @@ export async function setPermisoRetiroExcedente(id: number, puede_retirar_excede
   return data
 }
 
+export async function updateNombreUsuario(id: number, nombre: string): Promise<Usuario> {
+  const { data } = await api.patch<Usuario>(`/usuarios/${id}/nombre`, { nombre })
+  return data
+}
+
 export async function getCajaDeUsuario(id: number): Promise<CajaActual> {
   const { data } = await api.get<CajaActual>(`/usuarios/${id}/caja`)
   return data

@@ -1,3 +1,4 @@
+import { EntityActionsMenu } from '@/components/EntityActionsMenu'
 import { EntityHeaderCard } from '@/components/EntityHeaderCard'
 import type { Sucursal } from '@/services/sucursalService'
 
@@ -12,7 +13,6 @@ export function SucursalHeaderCard({ sucursal, onEdit, onToggleEstado }: Sucursa
     <EntityHeaderCard
       nombre={sucursal.nombre}
       activo={sucursal.activo}
-      editLabel="Editar sucursal"
       infoLines={
         <>
           {sucursal.direccion && <p className="text-sm text-muted-foreground">{sucursal.direccion}</p>}
@@ -25,13 +25,19 @@ export function SucursalHeaderCard({ sucursal, onEdit, onToggleEstado }: Sucursa
           )}
         </>
       }
-      onEdit={onEdit}
-      onToggleEstado={onToggleEstado}
-      toggleDialogTitle={sucursal.activo ? `¿Desactivar ${sucursal.nombre}?` : `¿Activar ${sucursal.nombre}?`}
-      toggleDialogDescription={
-        sucursal.activo
-          ? 'Sus equipos y cajeros seguirán existiendo, pero ya no podrán abrir caja ahí.'
-          : 'Volverá a estar disponible para asignar cajeros y abrir caja.'
+      actions={
+        <EntityActionsMenu
+          editLabel="Editar sucursal"
+          onEdit={onEdit}
+          activo={sucursal.activo}
+          onToggleEstado={onToggleEstado}
+          toggleDialogTitle={sucursal.activo ? `¿Desactivar ${sucursal.nombre}?` : `¿Activar ${sucursal.nombre}?`}
+          toggleDialogDescription={
+            sucursal.activo
+              ? 'Sus equipos y cajeros seguirán existiendo, pero ya no podrán abrir caja ahí.'
+              : 'Volverá a estar disponible para asignar cajeros y abrir caja.'
+          }
+        />
       }
     />
   )

@@ -103,23 +103,3 @@
     scrollbar-gutter: stable;
     }
 }
-
-/* Aísla el voucher imprimible (retiro de excedente de caja): oculta el resto de la app
-   al imprimir sin depender de dónde el portal del Dialog/Sheet lo monte en el DOM. Ancho
-   angosto a propósito (se ve como un ticket) — no asume una impresora térmica real conectada,
-   solo constriñe el layout impreso; sirve igual en cualquier impresora/tamaño de papel. */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #voucher-print,
-  #voucher-print * {
-    visibility: visible;
-  }
-  #voucher-print {
-    position: fixed;
-    inset: 0;
-    max-width: 320px;
-    margin: 0 auto;
-  }
-}

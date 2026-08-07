@@ -16,9 +16,7 @@ from app.models.detalle_compra import DetalleCompra  # noqa: F401
 from app.models.detalle_venta import DetalleVenta  # noqa: F401
 from app.models.movimiento_caja import MovimientoCaja  # noqa: F401
 from app.models.movimiento_inventario import MovimientoInventario  # noqa: F401
-from app.models.orden_reorden import OrdenReorden  # noqa: F401
 from app.models.producto import Producto  # noqa: F401
-from app.models.regla_reorden import ReglaReorden  # noqa: F401
 from app.models.proveedor import Proveedor  # noqa: F401
 from app.models.subcategoria import Subcategoria  # noqa: F401
 from app.models.usuario import Usuario  # noqa: F401

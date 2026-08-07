@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
@@ -22,6 +23,13 @@ interface ProductosTableProps {
   productos: ProductoConStock[]
   canManage: boolean
   emptyMessage?: string
+  // se oculta dentro del hub de Proveedores (ver docs/FRONTEND.md): ahí la tabla ya está
+  // scopeada a un solo proveedor, la columna sería el mismo valor repetido en cada fila
+  showProveedor?: boolean
+  // checkbox por fila para el bulk "Preparar pedido" del hub de Proveedores — ausente en el
+  // resto de usos de esta tabla (Productos), donde no aplica
+  selectedIds?: Set<number>
+  onToggleSelect?: (id: number) => void
   onEdit: (producto: ProductoConStock) => void
   onToggleEstado: (producto: ProductoConStock) => void
 }
@@ -30,10 +38,14 @@ export function ProductosTable({
   productos,
   canManage,
   emptyMessage = 'No hay productos.',
+  showProveedor = true,
+  selectedIds,
+  onToggleSelect,
   onEdit,
   onToggleEstado,
 }: ProductosTableProps) {
   const [pending, setPending] = useState<ProductoConStock | null>(null)
+  const selectable = selectedIds !== undefined && onToggleSelect !== undefined
 
   if (productos.length === 0) {
     return <EmptyState message={emptyMessage} bordered={false} />
@@ -44,9 +56,11 @@ export function ProductosTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {selectable && <TableHead />}
             <TableHead>Nombre</TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Categoría</TableHead>
+            {showProveedor && <TableHead>Proveedor</TableHead>}
             <TableHead>Precio</TableHead>
             <TableHead>Stock</TableHead>
             <TableHead>Estado</TableHead>
@@ -56,6 +70,15 @@ export function ProductosTable({
         <TableBody>
           {productos.map((producto) => (
             <TableRow key={producto.id}>
+              {selectable && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedIds?.has(producto.id)}
+                    onCheckedChange={() => onToggleSelect?.(producto.id)}
+                    aria-label={`Seleccionar ${producto.nombre}`}
+                  />
+                </TableCell>
+              )}
               <TableCell>{producto.nombre}</TableCell>
               <TableCell>{producto.sku}</TableCell>
               <TableCell>
@@ -63,6 +86,7 @@ export function ProductosTable({
                   ? `${producto.subcategoria.categoria.nombre} > ${producto.subcategoria.nombre}`
                   : producto.categoria?.nombre ?? '—'}
               </TableCell>
+              {showProveedor && <TableCell>{producto.proveedor?.nombre ?? '—'}</TableCell>}
               <TableCell className="font-semibold tabular-nums">{formatCurrency(producto.precio_venta)}</TableCell>
               <TableCell>
                 <StockCell stock={producto.stock} />

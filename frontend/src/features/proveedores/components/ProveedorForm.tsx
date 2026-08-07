@@ -26,7 +26,7 @@ export function ProveedorForm({ defaultValues, isPending, errorMessage, onSubmit
       <FormField label="Teléfono" register={register('telefono')} error={errors.telefono} />
       <FormField label="Email" type="email" register={register('email')} error={errors.email} />
       <FormField
-        label="CLABE (pago automático)"
+        label="CLABE (para pagarle sus pedidos)"
         placeholder="18 dígitos"
         register={register('clabe')}
         error={errors.clabe}

@@ -1,13 +1,12 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.caja import CajaSesion
 from app.models.equipo import Equipo
 from app.models.producto import Producto
-from app.models.regla_reorden import ReglaReorden
 from app.models.stock_sucursal import StockSucursal
 from app.models.venta import Venta
 
@@ -46,24 +45,14 @@ def ventas_por_sucursal_del_dia(db: Session, fecha: date) -> dict[int, tuple[Dec
     return {sucursal_id: (Decimal(total), cantidad) for sucursal_id, total, cantidad in db.execute(stmt).all()}
 
 
-def productos_bajo_umbral_sin_regla(db: Session, umbral: int) -> list[tuple[Producto, StockSucursal]]:
-    """Productos activos con stock en o debajo de `umbral` EN UNA SUCURSAL donde no hay ninguna
-    ReglaReorden activa para ese producto×sucursal — sin regla, esa caída de stock nunca genera
-    una OrdenReorden sugerida (`reorden_service.disparar_si_corresponde`), así que el admin no se
-    entera si no se lo decimos aquí."""
+def productos_bajo_umbral(db: Session, umbral: int) -> list[tuple[Producto, StockSucursal]]:
+    """Productos activos con stock en o debajo de `umbral` en una sucursal — alimenta la alerta
+    `stock_bajo` del reporte de atención (sin recompra automática de por medio: el pedido a un
+    proveedor siempre lo arma y aprueba el admin a mano, ver docs/BACKEND.md)."""
     stmt = (
         select(Producto, StockSucursal)
         .join(StockSucursal, StockSucursal.producto_id == Producto.id)
-        .outerjoin(
-            ReglaReorden,
-            (ReglaReorden.producto_id == StockSucursal.producto_id)
-            & (ReglaReorden.sucursal_id == StockSucursal.sucursal_id),
-        )
-        .where(
-            Producto.activo.is_(True),
-            StockSucursal.cantidad <= umbral,
-            or_(ReglaReorden.id.is_(None), ReglaReorden.activo.is_(False)),
-        )
+        .where(Producto.activo.is_(True), StockSucursal.cantidad <= umbral)
         .order_by(StockSucursal.cantidad)
     )
     return list(db.execute(stmt).all())

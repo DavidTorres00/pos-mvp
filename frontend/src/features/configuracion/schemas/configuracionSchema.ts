@@ -13,8 +13,6 @@ const numeroOpcional = z
 
 export const configuracionSchema = z.object({
   limite_efectivo_caja: numeroOpcional,
-  openpay_tope_por_orden: numeroOpcional,
-  openpay_tope_diario: numeroOpcional,
   umbral_stock_bajo_default: numeroOpcional,
 })
 

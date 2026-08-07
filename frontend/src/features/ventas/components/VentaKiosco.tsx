@@ -20,16 +20,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { CierreCajaForm } from '@/features/caja/components/CierreCajaForm'
 import { CierreResumen } from '@/features/caja/components/CierreResumen'
-import { ComprobanteRetiro } from '@/features/caja/components/ComprobanteRetiro'
 import { useCajaActual } from '@/features/caja/hooks/useCajaActual'
 import { useCerrarCaja, useRetirarExcedenteCaja } from '@/features/caja/hooks/useCajaMutations'
 import { useCajaResumen } from '@/features/caja/hooks/useCajaResumen'
 import type { CierreFormValues } from '@/features/caja/schemas/cajaSchema'
 import { useLogout } from '@/features/auth/hooks/useLogout'
+import { construirComprobanteCierreHtml } from '@/features/caja/lib/comprobanteCierreHtml'
+import { construirComprobanteRetiroHtml } from '@/features/caja/lib/comprobanteRetiroHtml'
+import { construirComprobanteVentaHtml } from '@/features/ventas/lib/comprobanteVentaHtml'
 import { useCrearVenta } from '@/features/ventas/hooks/useCrearVenta'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatTime } from '@/lib/format'
 import { sumLineTotals } from '@/lib/lineItems'
+import { imprimirTicketTermico } from '@/lib/qzPrint'
 import { cn } from '@/lib/utils'
 import { listProductos, type ProductoConStock } from '@/services/productoService'
 import { getUltimoRetiroExcedente, type CajaResumen, type VoucherRetiro } from '@/services/cajaService'
@@ -90,10 +93,10 @@ export function VentaKiosco() {
   const [cierreResultado, setCierreResultado] = useState<CajaResumen | null>(null)
   const [excedenteOpen, setExcedenteOpen] = useState(false)
   const [aviso, setAviso] = useState<Aviso | null>(null)
-  const [voucher, setVoucher] = useState<VoucherRetiro | null>(null)
   const skuInputRef = useRef<HTMLInputElement>(null)
-  // último comprobante ya mostrado en esta pantalla, para no reconstruirlo dos veces cuando el
-  // propio cajero lo retira (voucher ya sale de la respuesta de la mutación al instante)
+  // último retiro ya impreso, para no imprimirlo dos veces cuando el propio cajero lo retira
+  // (ya se imprime desde la respuesta de la mutación) y casi al instante llega también el eco
+  // por SSE de la transición `excede_limite: true → false`
   const shownVoucherIdRef = useRef<number | null>(null)
   const excedePrevRef = useRef(false)
   const avisoTimeoutRef = useRef<number | null>(null)
@@ -214,6 +217,10 @@ export function VentaKiosco() {
 
   function handleCobrar() {
     if (!puedeCobrar) return
+    // se capturan antes de resetear el form — la nota de venta los necesita, y el reset abajo
+    // los deja vacíos de inmediato para que el cajero pueda empezar la siguiente venta
+    const pagoConNumero = formaPago === 'efectivo' && pagoCon !== '' ? Number(pagoCon) : undefined
+    const cambioCalculado = pagoConNumero !== undefined ? Math.max(0, cambio) : undefined
     crear.mutate(
       { items: lineas.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })), forma_pago: formaPago },
       {
@@ -225,10 +232,23 @@ export function VentaKiosco() {
           skuInputRef.current?.focus()
           // aviso breve, no bloqueante — el cajero sigue escaneando el siguiente producto de
           // inmediato. El importe sale de la respuesta del servidor (venta ya persistida), no
-          // recalculado en el cliente. La impresión de comprobante para el cliente queda fuera
-          // de alcance por ahora: será automática cuando exista impresora térmica conectada, no
-          // un botón — no tiene sentido simularlo con window.print() mientras tanto.
+          // recalculado en el cliente.
           mostrarAviso({ tipo: 'success', mensaje: `Venta registrada · ${formatCurrency(venta.total)}` })
+          // Directo a la impresora térmica vía QZ Tray (ver src/lib/qzPrint.ts), sin diálogo del
+          // navegador. No bloquea ni revierte nada si falla: la venta ya quedó registrada en el
+          // servidor, solo se avisa al cajero para que reimprima o entregue el ticket a mano.
+          const html = construirComprobanteVentaHtml({
+            venta,
+            cajero: caja?.usuario_nombre ?? usuario?.nombre ?? '',
+            sucursal: caja?.sucursal_nombre ?? '',
+            direccion: caja?.sucursal_direccion,
+            equipo: caja?.equipo_nombre ?? '',
+            pagoCon: pagoConNumero,
+            cambio: cambioCalculado,
+          })
+          imprimirTicketTermico(html).catch(() => {
+            mostrarAviso({ tipo: 'error', mensaje: 'No se pudo imprimir el ticket automáticamente.' })
+          })
         },
       },
     )
@@ -236,15 +256,32 @@ export function VentaKiosco() {
 
   function handleTerminarTurno(values: CierreFormValues) {
     if (cerrar.isPending) return
-    // el logout ya no se encadena automático: el cajero tiene que ver primero si su conteo
-    // cuadró contra lo esperado (`CierreResumen`) — antes se deslogueaba de inmediato sin
-    // mostrarle esa diferencia, que solo quedaba disponible para el admin en auditoría.
-    cerrar.mutate(values, { onSuccess: (resumen) => setCierreResultado(resumen) })
+    // el cajero ve primero si su conteo cuadró contra lo esperado (`CierreResumen`) antes de
+    // salir — el logout es un paso aparte (botón "Salir" del propio resumen).
+    cerrar.mutate(values, {
+      onSuccess: (resumen) => {
+        setCierreResultado(resumen)
+        // Misma vía que la nota de venta y el retiro de excedente: directo a la impresora
+        // térmica vía QZ Tray, sin diálogo ni pantalla dedicada — el efectivo final tiene que
+        // quedar asentado en papel exceda o no el límite de la sucursal en el turno.
+        imprimirTicketTermico(construirComprobanteCierreHtml(resumen)).catch(() => {
+          mostrarAviso({ tipo: 'error', mensaje: 'No se pudo imprimir el corte de caja automáticamente.' })
+        })
+      },
+    })
   }
 
   function handleSalir() {
     if (logout.isPending) return
     logout.mutate()
+  }
+
+  // Misma vía que la nota de venta (ver handleCobrar): directo a la impresora térmica vía QZ
+  // Tray, sin diálogo ni pantalla dedicada — es la única impresora del kiosko.
+  function imprimirComprobanteRetiro(voucher: VoucherRetiro) {
+    imprimirTicketTermico(construirComprobanteRetiroHtml(voucher)).catch(() => {
+      mostrarAviso({ tipo: 'error', mensaje: 'No se pudo imprimir el comprobante de retiro automáticamente.' })
+    })
   }
 
   function handleRetirarExcedente() {
@@ -253,7 +290,8 @@ export function VentaKiosco() {
       onSuccess: (data) => {
         shownVoucherIdRef.current = data.movimiento_id
         setExcedenteOpen(false)
-        setVoucher(data)
+        mostrarAviso({ tipo: 'success', mensaje: `Retiro registrado · ${formatCurrency(data.monto_retirado)}` })
+        imprimirComprobanteRetiro(data)
       },
     })
   }
@@ -266,18 +304,17 @@ export function VentaKiosco() {
       setExcedenteOpen(true)
     } else if (excedePrevRef.current) {
       // se acaba de resolver — cierra la pantalla de bloqueo aunque la resolución venga de otra
-      // sesión (admin remoto): sin esto, `excedenteOpen` se quedaba en `true` para siempre (nada
-      // más la vuelve a poner en `false`) y el voucher de abajo solo la tapaba, no la cerraba —
-      // al descartar el voucher ("Volver a ventas"), reaparecía debajo con los montos ya en $0.
+      // sesión (admin remoto): sin esto, `excedenteOpen` se quedaba en `true` para siempre, nada
+      // más la vuelve a poner en `false`.
       setExcedenteOpen(false)
       // Si lo resolvió un admin desde otra sesión (ver docs/BACKEND.md), este cajero nunca pasó
-      // por handleRetirarExcedente y no tiene el comprobante en mano — lo reconstruye del
-      // servidor para poder mostrarlo/imprimirlo en la caja física donde está el efectivo, que
-      // es de donde tiene que salir el comprobante.
+      // por handleRetirarExcedente y no tiene el comprobante impreso — lo reconstruye del
+      // servidor para imprimirlo en la caja física donde está el efectivo, que es de donde tiene
+      // que salir el comprobante.
       getUltimoRetiroExcedente().then((data) => {
         if (data && data.movimiento_id !== shownVoucherIdRef.current) {
           shownVoucherIdRef.current = data.movimiento_id
-          setVoucher(data)
+          imprimirComprobanteRetiro(data)
         }
       })
     }
@@ -286,7 +323,7 @@ export function VentaKiosco() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (cierreOpen || excedenteOpen || voucher !== null) return
+      if (cierreOpen || excedenteOpen) return
       if (e.key === 'F12') {
         e.preventDefault()
         handleCobrar()
@@ -631,69 +668,6 @@ export function VentaKiosco() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={voucher !== null} onOpenChange={(open) => !open && setVoucher(null)}>
-        <SheetContent side="full" container={mainEl} showCloseButton={false} className="p-0">
-          <div className="flex h-full flex-col overflow-y-auto md:flex-row">
-            <div className="flex w-full flex-col justify-between gap-8 p-8 md:max-w-lg md:p-14">
-              <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold tracking-widest text-destructive uppercase">Excedente de efectivo</span>
-                <h2 className="text-[clamp(1.75rem,3.5vw,2.75rem)] leading-[1.05] font-black tracking-tight">
-                  Retiro registrado
-                </h2>
-                <p className="max-w-md text-muted-foreground">
-                  La caja rebasó el máximo permitido de efectivo. El retiro quedó asentado; entrega el efectivo a
-                  bóveda junto con el comprobante impreso.
-                </p>
-              </div>
-
-              {voucher && (
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t pt-6 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Máximo permitido</p>
-                    <p className="font-semibold">{formatCurrency(cajaActual?.limite_efectivo ?? '0')}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Excedente detectado</p>
-                    <p className="font-semibold text-destructive">{formatCurrency(voucher.monto_retirado)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase">Folio</p>
-                    <p className="font-semibold">#{String(voucher.movimiento_id).padStart(4, '0')}</p>
-                  </div>
-                  {voucher.autorizado_por !== voucher.cajero && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase">Autorizó</p>
-                      <p className="font-semibold">{voucher.autorizado_por}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-3">
-                  <Button size="lg" onClick={() => window.print()}>
-                    Imprimir comprobante
-                  </Button>
-                  <Button size="lg" variant="outline" onClick={() => setVoucher(null)}>
-                    Volver a ventas
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">El resto de la pantalla no aparece en el papel al imprimir.</p>
-              </div>
-            </div>
-
-            <div className="hidden w-px shrink-0 bg-border md:block" />
-
-            <div className="flex w-full flex-1 items-start justify-center overflow-y-auto p-8 md:p-14">
-              {voucher && (
-                <div className="w-full max-w-sm">
-                  <ComprobanteRetiro voucher={voucher} />
-                </div>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

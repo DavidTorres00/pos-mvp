@@ -10,7 +10,7 @@ from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import LoginRequest
 from app.schemas.caja import CajaActualOut, CajaCerrarRequest, CajaResumenOut, VoucherRetiroOut
 from app.schemas.pagination import Pagina
-from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPermisosUpdate
+from app.schemas.usuario import UsuarioCreate, UsuarioNombreUpdate, UsuarioOut, UsuarioPermisosUpdate
 from app.services import auth_service, caja_service, usuario_service
 from app.services.auth_service import CajaAbiertaPropiaError
 from app.services.caja_service import CajaNoAbiertaError, MotivoDiferenciaRequeridoError, SinExcedenteError
@@ -93,6 +93,19 @@ def crear(
         )
     except EmailDuplicadoError:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya está registrado")
+
+
+@usuarios_router.patch("/{usuario_id}/nombre", response_model=UsuarioOut)
+def actualizar_nombre(
+    usuario_id: int,
+    payload: UsuarioNombreUpdate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+) -> UsuarioOut:
+    try:
+        return usuario_service.actualizar_nombre(db, usuario.id, usuario_id, payload.nombre)
+    except UsuarioNoEncontradoError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
 
 @usuarios_router.patch("/{usuario_id}/permisos", response_model=UsuarioOut)

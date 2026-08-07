@@ -12,9 +12,9 @@ class AlertaAcuse(Base):
     Solo aplica a alertas basadas en un hecho histórico e inmutable — hoy únicamente
     `faltante_caja`: la caja ya cerró con faltante, no hay ninguna acción futura que lo
     "resuelva" por sí sola. Deliberadamente no aplica a las alertas de condición viva
-    (`caja_excedida`, `caja_sin_cierre`, `orden_reorden_*`, `stock_bajo_sin_regla`): esas ya
-    desaparecen solas en cuanto se arregla el problema real que describen, y acusarlas a mano
-    solo escondería un problema que sigue vivo.
+    (`caja_excedida`, `caja_sin_cierre`, `stock_bajo`, `sin_stock`): esas ya desaparecen solas en
+    cuanto se arregla el problema real que describen, y acusarlas a mano solo escondería un
+    problema que sigue vivo.
 
     `tipo`+`referencia_id` genérico a propósito (no solo `auditoria_id`) por si algún futuro
     tipo de alerta puntual necesita lo mismo, sin rediseñar la tabla — pero el service valida

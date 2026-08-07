@@ -11,6 +11,6 @@ ZONA_NEGOCIO = ZoneInfo("America/Mexico_City")
 
 def hoy_negocio() -> date:
     """'Hoy' en la zona horaria del negocio — usar para cualquier default de 'fecha actual' que
-    después se compara contra columnas timestamptz vía `func.date(...)` (ventas del día, tope
-    diario de OpenPay, etc.), para que coincida con el día que Postgres ya calcula."""
+    después se compara contra columnas timestamptz vía `func.date(...)` (ventas del día, etc.),
+    para que coincida con el día que Postgres ya calcula."""
     return datetime.now(ZONA_NEGOCIO).date()

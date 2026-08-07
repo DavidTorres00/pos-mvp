@@ -6,6 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
 from app.models.categoria import Categoria
+from app.models.proveedor import Proveedor
 from app.models.subcategoria import Subcategoria
 
 
@@ -24,3 +25,8 @@ class Producto(Base):
 
     subcategoria_id: Mapped[int | None] = mapped_column(ForeignKey("subcategorias.id"), nullable=True)
     subcategoria: Mapped[Subcategoria | None] = relationship(lazy="joined")
+
+    # quién surte habitualmente este producto (catálogo, no por sucursal) — informativo/default:
+    # no restringe con qué proveedor se le puede armar un pedido en Compras (ver docs/BACKEND.md)
+    proveedor_id: Mapped[int | None] = mapped_column(ForeignKey("proveedores.id"), nullable=True)
+    proveedor: Mapped[Proveedor | None] = relationship(lazy="joined")

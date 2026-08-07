@@ -36,6 +36,20 @@ def crear(db: Session, actor_id: int, email: str, nombre: str, password: str, su
     return usuario
 
 
+def actualizar_nombre(db: Session, actor_id: int, usuario_id: int, nombre: str) -> Usuario:
+    usuario = usuario_repository.get_by_id(db, usuario_id)
+    if usuario is None:
+        raise UsuarioNoEncontradoError(usuario_id)
+    anterior = usuario.nombre
+    usuario.nombre = nombre
+    usuario = usuario_repository.save(db, usuario)
+    if anterior != nombre:
+        auditoria_service.registrar(
+            db, actor_id, "usuario_nombre_cambiado", "usuario", usuario.id, {"nombre_anterior": anterior, "nombre_nuevo": nombre}
+        )
+    return usuario
+
+
 def actualizar_permisos(db: Session, actor_id: int, usuario_id: int, puede_retirar_excedente: bool) -> Usuario:
     usuario = usuario_repository.get_by_id(db, usuario_id)
     if usuario is None:

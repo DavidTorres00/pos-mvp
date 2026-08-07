@@ -7,8 +7,8 @@ interface SucursalActivaState {
 }
 
 // Sucursal que el admin eligió para trabajar en pantallas de stock (Productos, Inventario,
-// Compras, Reglas/Órdenes de reorden). El cajero nunca usa este store: su sucursal_id se
-// resuelve siempre en el servidor a partir de su propio usuario.
+// Compras). El cajero nunca usa este store: su sucursal_id se resuelve siempre en el servidor a
+// partir de su propio usuario.
 export const useSucursalActivaStore = create<SucursalActivaState>()(
   persist(
     (set) => ({

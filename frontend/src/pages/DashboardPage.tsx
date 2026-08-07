@@ -84,8 +84,8 @@ export function DashboardPage() {
     nombreSeleccionada === null
       ? (cajasAbiertas ?? [])
       : (cajasAbiertas ?? []).filter((c) => c.caja.sucursal_nombre === nombreSeleccionada)
-  // las alertas sin sucursal (p. ej. el agregado de órdenes de reorden, que puede abarcar varias)
-  // se muestran siempre, sin importar el filtro — no tiene sentido esconderlas al elegir una sucursal
+  // las alertas sin sucursal (p. ej. el agregado de stock bajo, que puede abarcar varias) se
+  // muestran siempre, sin importar el filtro — no tiene sentido esconderlas al elegir una sucursal
   const alertasFiltradas =
     nombreSeleccionada === null
       ? (atencion ?? [])
@@ -147,7 +147,7 @@ export function DashboardPage() {
           <StatTile
             label="Pendientes de decidir"
             value={String(alertasFiltradas.length)}
-            hint={alertasFiltradas.length > 0 ? 'Órdenes, cortes y umbrales esperándote' : 'Nada esperando tu decisión'}
+            hint={alertasFiltradas.length > 0 ? 'Cortes y alertas de stock esperándote' : 'Nada esperando tu decisión'}
             icon={ListChecksIcon}
           />
         </div>
@@ -158,7 +158,11 @@ export function DashboardPage() {
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Sucursales</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {resumenesFiltrados.map((resumen) => (
-              <SucursalCard key={resumen.sucursal_id} resumen={resumen} />
+              <SucursalCard
+                key={resumen.sucursal_id}
+                resumen={resumen}
+                alertas={(atencion ?? []).filter((a) => a.sucursal_id === resumen.sucursal_id)}
+              />
             ))}
           </div>
         </div>

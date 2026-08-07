@@ -2,8 +2,7 @@ import { api } from '@/services/api'
 import type { PaginatedResponse } from '@/services/pagination'
 
 // Catálogo puro — es el que va embebido en Producto.categoria/Subcategoria.categoria (ventas,
-// compras, movimientos, reglas/órdenes de reorden, etc.). Sin conteos: esos endpoints nunca los
-// calculan.
+// compras, movimientos, etc.). Sin conteos: esos endpoints nunca los calculan.
 export interface Categoria {
   id: number
   nombre: string
@@ -16,6 +15,10 @@ export interface Categoria {
 export interface CategoriaResumen extends Categoria {
   total_subcategorias: number
   total_productos: number
+  // ambos solo reflejan la realidad si la llamada mandó sucursalId (ver listCategorias) — si
+  // no, siempre 0, no es un "sin alertas" confiable
+  productos_sin_stock: number
+  productos_stock_bajo: number
 }
 
 export interface CategoriaPayload {
@@ -24,6 +27,7 @@ export interface CategoriaPayload {
 
 export interface ListCategoriasParams {
   q?: string
+  sucursalId?: number | null
   page?: number
   size?: number
 }
@@ -31,9 +35,9 @@ export interface ListCategoriasParams {
 export async function listCategorias(
   params: ListCategoriasParams = {},
 ): Promise<PaginatedResponse<CategoriaResumen>> {
-  const { q, page, size } = params
+  const { q, sucursalId, page, size } = params
   const { data } = await api.get<PaginatedResponse<CategoriaResumen>>('/categorias', {
-    params: { q: q || undefined, page, size },
+    params: { q: q || undefined, sucursal_id: sucursalId ?? undefined, page, size },
   })
   return data
 }

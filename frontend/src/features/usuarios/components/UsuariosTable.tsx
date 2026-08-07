@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { EmptyState } from '@/components/DataStates'
@@ -7,10 +8,11 @@ import type { Usuario } from '@/services/usuarioService'
 interface UsuariosTableProps {
   usuarios: Usuario[]
   onTogglePermiso: (usuario: Usuario) => void
+  onEdit: (usuario: Usuario) => void
   pending: boolean
 }
 
-export function UsuariosTable({ usuarios, onTogglePermiso, pending }: UsuariosTableProps) {
+export function UsuariosTable({ usuarios, onTogglePermiso, onEdit, pending }: UsuariosTableProps) {
   if (usuarios.length === 0) {
     return <EmptyState message="No hay usuarios." bordered={false} />
   }
@@ -25,6 +27,7 @@ export function UsuariosTable({ usuarios, onTogglePermiso, pending }: UsuariosTa
           <TableHead>Sucursal</TableHead>
           <TableHead>Estado</TableHead>
           <TableHead>Puede retirar excedente de caja</TableHead>
+          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -56,6 +59,11 @@ export function UsuariosTable({ usuarios, onTogglePermiso, pending }: UsuariosTa
                   }
                 />
               )}
+            </TableCell>
+            <TableCell>
+              <Button variant="outline" size="sm" onClick={() => onEdit(usuario)}>
+                Editar
+              </Button>
             </TableCell>
           </TableRow>
         ))}

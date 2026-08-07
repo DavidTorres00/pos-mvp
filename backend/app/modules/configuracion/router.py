@@ -27,7 +27,5 @@ def actualizar(
         db,
         usuario.id,
         payload.limite_efectivo_caja,
-        payload.openpay_tope_por_orden,
-        payload.openpay_tope_diario,
         payload.umbral_stock_bajo_default,
     )

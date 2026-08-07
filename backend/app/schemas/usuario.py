@@ -25,3 +25,7 @@ class UsuarioOut(BaseModel):
 
 class UsuarioPermisosUpdate(BaseModel):
     puede_retirar_excedente: bool
+
+
+class UsuarioNombreUpdate(BaseModel):
+    nombre: str = Field(min_length=1, max_length=255)

@@ -4,6 +4,7 @@ import {
   createUsuario,
   retirarExcedenteDeUsuario,
   setPermisoRetiroExcedente,
+  updateNombreUsuario,
   type UsuarioCreatePayload,
 } from '@/services/usuarioService'
 
@@ -13,6 +14,10 @@ export function useSetPermisoRetiroExcedente() {
       setPermisoRetiroExcedente(id, puede_retirar_excedente),
     [['usuarios']],
   )
+}
+
+export function useActualizarNombreUsuario() {
+  return useApiMutation(({ id, nombre }: { id: number; nombre: string }) => updateNombreUsuario(id, nombre), [['usuarios']])
 }
 
 export function useCrearUsuario() {

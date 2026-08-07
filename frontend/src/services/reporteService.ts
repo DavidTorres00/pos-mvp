@@ -24,14 +24,7 @@ export interface SucursalResumen {
   cajas_excedidas: number
 }
 
-export type AlertaTipo =
-  | 'caja_excedida'
-  | 'orden_reorden_pendiente'
-  | 'orden_reorden_error'
-  | 'caja_sin_cierre'
-  | 'stock_bajo_sin_regla'
-  | 'sin_stock'
-  | 'faltante_caja'
+export type AlertaTipo = 'caja_excedida' | 'caja_sin_cierre' | 'stock_bajo' | 'sin_stock' | 'faltante_caja'
 
 export interface Alerta {
   tipo: AlertaTipo

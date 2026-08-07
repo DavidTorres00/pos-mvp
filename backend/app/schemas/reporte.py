@@ -19,8 +19,10 @@ class VentasPorHoraItem(BaseModel):
 class AlertaOut(BaseModel):
     """Item del feed 'Requiere tu atención' del dashboard admin — heterogéneo a propósito (cada
     `tipo` representa una alerta de negocio distinta, con su propio texto ya compuesto en el
-    backend, no una fila de una tabla). `sucursal_nombre=None` significa 'todas las sucursales'
-    (p. ej. el agregado de órdenes de reorden pendientes, que puede abarcar varias)."""
+    backend, no una fila de una tabla). `sucursal_nombre=None` es la excepción, no la regla: solo
+    pasa si la sucursal ya no existe al momento de resolver el nombre (carrera improbable) — toda
+    alerta de stock (`stock_bajo`/`sin_stock`) es siempre una por sucursal, nunca un agregado
+    'todas las sucursales' (ver docs/BACKEND.md)."""
 
     tipo: str
     titulo: str
@@ -31,8 +33,7 @@ class AlertaOut(BaseModel):
     # es un corte del inventario ahora mismo, no un evento con fecha) — no se inventa una fecha
     created_at: datetime | None
     # identifican el destino exacto para que el frontend navegue directo a la fila concreta (no
-    # solo a la página general) y la resalte — nulos en las alertas que son un agregado sin una
-    # sola fila a la que apuntar (p. ej. órdenes de reorden pendientes, que abarcan varias)
+    # solo a la página general) y la resalte
     sucursal_id: int | None
     equipo_id: int | None
     auditoria_id: int | None

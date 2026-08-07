@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     cookie_secure: bool = True
     cors_origins: str = "http://localhost:5173"
 
-    # OpenPay (pago automático a proveedor, §4.6): sin configurar, la función queda deshabilitada
+    # OpenPay (pago a proveedor al aprobar un pedido, siempre manual): sin configurar, la función
+    # queda deshabilitada
     openpay_id: str | None = None
     openpay_private_key: str | None = None
     openpay_production: bool = False

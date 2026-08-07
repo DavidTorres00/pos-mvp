@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { StoreIcon } from 'lucide-react'
 
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -6,9 +7,9 @@ import { useSucursales } from '@/features/sucursales/hooks/useSucursales'
 import { useSucursalActivaStore } from '@/stores/sucursalActivaStore'
 
 // Selector de sucursal para el admin en pantallas que muestran/mutan stock (Productos,
-// Inventario, Compras, Reglas/Órdenes de reorden) — el admin no pertenece a ninguna sucursal,
-// así que debe elegir con cuál está trabajando en este momento. El cajero nunca ve este
-// selector: su sucursal_id se usa siempre automáticamente en el servidor.
+// Inventario, Compras) — el admin no pertenece a ninguna sucursal, así que debe elegir con cuál
+// está trabajando en este momento. El cajero nunca ve este selector: su sucursal_id se usa
+// siempre automáticamente en el servidor.
 export function SucursalActivaSelector() {
   const { data } = useSucursales('', 1, 100)
   const sucursales = data?.items.filter((sucursal) => sucursal.activo) ?? []
@@ -27,25 +28,31 @@ export function SucursalActivaSelector() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor="sucursal-activa" className="sr-only">
-        Sucursal
-      </Label>
-      <Select
-        value={sucursalId !== null ? String(sucursalId) : ''}
-        onValueChange={(value) => setSucursalId(Number(value))}
-      >
-        <SelectTrigger id="sucursal-activa" className="w-48 shrink-0">
-          <SelectValue placeholder="Sucursal" />
-        </SelectTrigger>
-        <SelectContent>
-          {sucursales.map((sucursal) => (
-            <SelectItem key={sucursal.id} value={String(sucursal.id)}>
-              {sucursal.nombre}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="flex items-center gap-2 rounded-md border bg-accent/40 py-1.5 pr-3 pl-2.5">
+      <StoreIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <div className="flex flex-col gap-0.5">
+        <Label htmlFor="sucursal-activa" className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+          Viendo stock de
+        </Label>
+        <Select
+          value={sucursalId !== null ? String(sucursalId) : ''}
+          onValueChange={(value) => setSucursalId(Number(value))}
+        >
+          <SelectTrigger
+            id="sucursal-activa"
+            className="h-auto w-44 shrink-0 border-none bg-transparent p-0 font-semibold shadow-none focus-visible:ring-0"
+          >
+            <SelectValue placeholder="Sucursal" />
+          </SelectTrigger>
+          <SelectContent>
+            {sucursales.map((sucursal) => (
+              <SelectItem key={sucursal.id} value={String(sucursal.id)}>
+                {sucursal.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   )
 }

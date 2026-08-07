@@ -7,17 +7,22 @@ import { FormField } from '@/components/form/FormField'
 import { SelectField } from '@/components/form/SelectField'
 import { useCategorias } from '@/features/categorias/hooks/useCategorias'
 import { productoSchema, type ProductoFormValues } from '@/features/productos/schemas/productoSchema'
+import { useProveedores } from '@/features/proveedores/hooks/useProveedores'
 import { useSubcategorias } from '@/features/subcategorias/hooks/useSubcategorias'
 import { numeroDesdeTexto } from '@/lib/numericInput'
 
 const SIN_CATEGORIA = 'sin-categoria'
 const SIN_SUBCATEGORIA = 'sin-subcategoria'
+const SIN_PROVEEDOR = 'sin-proveedor'
 
 interface ProductoFormProps {
   defaultValues?: ProductoFormValues
   // categoría precargada al crear desde el detalle de una categoría (hub de Productos) — se
   // ignora si `defaultValues` viene (edición), y no cuenta como "está editando"
   defaultCategoriaId?: number | null
+  // proveedor precargado al crear desde el detalle de un proveedor (hub de Proveedores) —
+  // mismo criterio que defaultCategoriaId
+  defaultProveedorId?: number | null
   isPending: boolean
   errorMessage?: string
   onSubmit: (values: ProductoFormValues) => void
@@ -26,6 +31,7 @@ interface ProductoFormProps {
 export function ProductoForm({
   defaultValues,
   defaultCategoriaId = null,
+  defaultProveedorId = null,
   isPending,
   errorMessage,
   onSubmit,
@@ -39,12 +45,20 @@ export function ProductoForm({
     formState: { errors },
   } = useForm<ProductoFormValues>({
     resolver: zodResolver(productoSchema),
-    defaultValues: defaultValues ?? { categoria_id: defaultCategoriaId, subcategoria_id: null, sku: null },
+    defaultValues:
+      defaultValues ?? {
+        categoria_id: defaultCategoriaId,
+        subcategoria_id: null,
+        sku: null,
+        proveedor_id: defaultProveedorId,
+      },
   })
   // Fetches the largest page the backend allows (size=100) since this dropdown needs the
   // full catalog, not a paginated slice.
-  const { data: categoriasData } = useCategorias('', 1, 100)
+  const { data: categoriasData } = useCategorias('', null, 1, 100)
   const categorias = categoriasData?.items ?? []
+  const { data: proveedoresData } = useProveedores('', 1, 100)
+  const proveedores = proveedoresData?.items.filter((proveedor) => proveedor.activo) ?? []
 
   const categoriaId = useWatch({ control, name: 'categoria_id' })
   const subcategoriaId = useWatch({ control, name: 'subcategoria_id' })
@@ -102,6 +116,20 @@ export function ProductoForm({
         register={register('precio_venta', { setValueAs: numeroDesdeTexto })}
         error={errors.precio_venta}
       />
+      <SelectField
+        control={control}
+        name="proveedor_id"
+        label="Proveedor"
+        placeholder="Sin proveedor"
+        error={errors.proveedor_id}
+        options={[
+          { value: SIN_PROVEEDOR, label: 'Sin proveedor' },
+          ...proveedores.map((proveedor) => ({ value: String(proveedor.id), label: proveedor.nombre })),
+        ]}
+        serialize={(value) => (value === null ? SIN_PROVEEDOR : String(value))}
+        parse={(value) => (value === SIN_PROVEEDOR ? null : Number(value))}
+      />
+      <p className="-mt-2 text-xs text-muted-foreground">Quién surte este producto habitualmente (opcional).</p>
 
       {errorMessage && (
         <p role="alert" className="text-sm text-destructive">

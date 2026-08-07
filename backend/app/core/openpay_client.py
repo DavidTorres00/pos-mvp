@@ -28,7 +28,7 @@ def crear_payout(monto: Decimal, clabe: str, nombre_beneficiario: str, descripci
     `referencia` es la llave de idempotencia (order_id) que OpenPay usa para no duplicar el
     traspaso ante un reintento.
 
-    Devuelve el id de la transacción en OpenPay para guardarlo en OrdenReorden.openpay_payment_id.
+    Devuelve el id de la transacción en OpenPay para guardarlo en Compra.openpay_payment_id.
 
     NOTA para producción: el endpoint y la forma del payload (`/payouts`, `bank_account.clabe`)
     siguen la documentación pública de OpenPay Payouts; no hay credenciales de sandbox en este

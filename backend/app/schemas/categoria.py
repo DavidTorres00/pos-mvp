@@ -15,8 +15,8 @@ class CategoriaEstado(BaseModel):
 
 class CategoriaOut(BaseModel):
     """Catálogo puro — es el que va embebido en ProductoOut.categoria/SubcategoriaOut.categoria
-    (ventas, compras, movimientos, reglas/órdenes de reorden, etc.). Sin conteos: esos endpoints
-    nunca los calculan, y agregarlos aquí rompería la serialización en todos ellos."""
+    (ventas, compras, movimientos, etc.). Sin conteos: esos endpoints nunca los calculan, y
+    agregarlos aquí rompería la serialización en todos ellos."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,3 +33,7 @@ class CategoriaResumenOut(CategoriaOut):
 
     total_subcategorias: int
     total_productos: int
+    # ambos solo tienen sentido si el llamador manda sucursal_id (ver categoria_service.listar)
+    # — sin eso, 0 siempre, nunca es un "sin alertas" real.
+    productos_sin_stock: int
+    productos_stock_bajo: int

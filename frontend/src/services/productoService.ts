@@ -1,10 +1,11 @@
 import { api } from '@/services/api'
 import type { Categoria } from '@/services/categoriaService'
 import type { PaginatedResponse } from '@/services/pagination'
+import type { Proveedor } from '@/services/proveedorService'
 import type { Subcategoria } from '@/services/subcategoriaService'
 
 // Catálogo puro (sin cantidad) — el stock ya no vive en Producto, es por sucursal. Usado tal
-// cual para referencias anidadas (item de compra, movimiento, regla/orden de reorden).
+// cual para referencias anidadas (item de compra, movimiento de inventario).
 export interface Producto {
   id: number
   nombre: string
@@ -15,6 +16,8 @@ export interface Producto {
   categoria: Categoria | null
   subcategoria_id: number | null
   subcategoria: Subcategoria | null
+  proveedor_id: number | null
+  proveedor: Proveedor | null
 }
 
 // Producto + stock de UNA sucursal específica — solo tiene sentido en el listado/detalle de
@@ -29,12 +32,14 @@ export interface ProductoPayload {
   precio_venta: number
   categoria_id: number | null
   subcategoria_id: number | null
+  proveedor_id: number | null
 }
 
 export interface ListProductosParams {
   q?: string
   activo?: boolean
   categoriaId?: number | null
+  proveedorId?: number | null
   sucursalId?: number | null
   page?: number
   size?: number
@@ -43,12 +48,13 @@ export interface ListProductosParams {
 export async function listProductos(
   params: ListProductosParams = {},
 ): Promise<PaginatedResponse<ProductoConStock>> {
-  const { q, activo, categoriaId, sucursalId, page, size } = params
+  const { q, activo, categoriaId, proveedorId, sucursalId, page, size } = params
   const { data } = await api.get<PaginatedResponse<ProductoConStock>>('/productos', {
     params: {
       q: q || undefined,
       activo,
       categoria_id: categoriaId ?? undefined,
+      proveedor_id: proveedorId ?? undefined,
       sucursal_id: sucursalId ?? undefined,
       page,
       size,
