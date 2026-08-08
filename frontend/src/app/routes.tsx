@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { Navigate, createBrowserRouter } from 'react-router-dom'
 
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary'
 import { ProtectedLayout } from '@/layouts/ProtectedLayout'
@@ -7,8 +7,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import {
   AuditoriaPage,
   ConfiguracionPage,
-  DashboardPage,
   InventarioPage,
+  PlanPage,
   ProductosPage,
   ProveedoresPage,
   SucursalesPage,
@@ -23,7 +23,9 @@ export const router = createBrowserRouter([
     element: <ProtectedLayout />,
     errorElement: <RouteErrorBoundary />,
     children: [
-      { index: true, element: <DashboardPage /> },
+      // sin Dashboard: Ventas es la pantalla de entrada del admin, ya trae KPIs/Atención/Top
+      // productos — ver docs/FRONTEND.md
+      { index: true, element: <Navigate to="/ventas" replace /> },
       { path: 'productos', element: <ProductosPage /> },
       { path: 'inventario', element: <InventarioPage /> },
       { path: 'proveedores', element: <ProveedoresPage /> },
@@ -32,6 +34,7 @@ export const router = createBrowserRouter([
       { path: 'usuarios', element: <UsuariosPage /> },
       { path: 'sucursales', element: <SucursalesPage /> },
       { path: 'configuracion', element: <ConfiguracionPage /> },
+      { path: 'plan', element: <PlanPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

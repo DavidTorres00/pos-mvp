@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.equipo import Equipo
@@ -36,6 +36,13 @@ def get_activos(db: Session) -> list[Equipo]:
     """Todos los equipos activos de todas las sucursales — usado por el reporte de resumen
     por sucursal del dashboard admin (§ mapear equipo_id -> sucursal_id sin N+1)."""
     return list(db.scalars(select(Equipo).where(Equipo.activo.is_(True))))
+
+
+def contar_activos(db: Session) -> int:
+    """Total de equipos activos de todas las sucursales — contra esto se compara
+    `ConfiguracionNegocio.limite_equipos` (cupo de hardware físico vendido a esta instalación,
+    ver equipo_service.crear/cambiar_estado)."""
+    return db.scalar(select(func.count()).select_from(Equipo).where(Equipo.activo.is_(True))) or 0
 
 
 def create(db: Session, equipo: Equipo) -> Equipo:

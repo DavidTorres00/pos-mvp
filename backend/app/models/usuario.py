@@ -11,6 +11,10 @@ from app.models.sucursal import Sucursal
 class RolUsuario(str, enum.Enum):
     ADMIN = "admin"
     CAJERO = "cajero"
+    # dueño de Soluciones Web (nosotros) — gestiona el cupo de equipos habilitados por instalación,
+    # sin acceso a ningún módulo de negocio del cliente (ventas/caja/catálogo/etc.), ver
+    # app/modules/superadmin
+    SUPERUSER = "superuser"
 
 
 class Usuario(Base):

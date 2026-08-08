@@ -15,8 +15,22 @@ export const usuarioCreateSchema = z
 
 export type UsuarioCreateFormValues = z.infer<typeof usuarioCreateSchema>
 
-export const usuarioNombreSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido'),
+export const usuarioEditSchema = z
+  .object({
+    nombre: z.string().min(1, 'El nombre es requerido'),
+    email: z.string().email('Email inválido'),
+    sucursal_id: z.number().nullable(),
+  })
+  .superRefine((values, ctx) => {
+    if (values.sucursal_id === null) {
+      ctx.addIssue({ code: 'custom', message: 'Selecciona una sucursal', path: ['sucursal_id'] })
+    }
+  })
+
+export type UsuarioEditFormValues = z.infer<typeof usuarioEditSchema>
+
+export const usuarioPasswordSchema = z.object({
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
 })
 
-export type UsuarioNombreFormValues = z.infer<typeof usuarioNombreSchema>
+export type UsuarioPasswordFormValues = z.infer<typeof usuarioPasswordSchema>

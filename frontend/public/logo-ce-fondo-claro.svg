@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 260 260" fill="none">
+  <title>Cē</title>
+  <path d="M56 88 L112 44" stroke="#C98A2E" stroke-width="26" stroke-linecap="round"></path>
+  <path d="M112 44 L112 152" stroke="#14130F" stroke-width="30" stroke-linecap="round"></path>
+  <path d="M112 152 C112 190 138 216 180 216" stroke="#17A398" stroke-width="30" stroke-linecap="round" fill="none"></path>
+  <rect x="203" y="203" width="26" height="26" rx="7" fill="#17A398"></rect>
+</svg>

@@ -3,26 +3,19 @@
 # MVP Punto de Venta (POS)
 
 ## Visión
-Sistema propio de negocio para una tienda real (abarrotes/súper), que reemplaza por completo un POS de terceros usado solo para cobrar. No es "competir" con ese POS — resuelve necesidades que nunca cubrió: inventario real, control remoto del dueño (vive en otro estado), auditoría de quién hizo qué, límite/control de efectivo en caja, y automatización de reorden + pago a proveedor.
+**Cē POS**: producto de Soluciones Web (Cē), vendido como kit completo (software + hardware — impresora/lector/terminal) a comercios reales (abarrotes/súper), single-tenant por cliente — cada cliente corre su propia instalación aislada (base de datos + backend propios), nunca comparte datos con otro cliente. Reemplaza por completo un POS de terceros usado solo para cobrar: resuelve lo que ese nunca cubrió — inventario real, control remoto del dueño, auditoría de quién hizo qué, límite/control de efectivo en caja, multisucursal, y automatización de reorden + pago a proveedor. Ver `docs/CONTROL_PLANE.md` para el modelo de negocio (superuser, plan, aprovisionamiento de clientes nuevos).
 
 ## Objetivo
-El sistema debe permitir operar una tienda con una sola sucursal y un solo equipo, con visibilidad y control remoto real para el dueño.
+El sistema debe permitir operar uno o varios comercios (multisucursal, cada uno con sus propios equipos/cajas registradoras) con visibilidad y control remoto real para el dueño — no todo cliente necesita más de una sucursal, y el sistema se adapta sin pedir decisiones sin opciones reales (ver `docs/FRONTEND.md`, "admin de una sola sucursal").
 
 ## Fuera del alcance
-- Multi sucursal y rol `super_admin` (ver más abajo cómo no bloquear esa extensión futura).
-- Facturación electrónica / CFDI (el cliente no factura).
+- Facturación electrónica / CFDI.
 - Recargas de tiempo aire, pago de servicios, pasarelas tipo MercadoPago/Prosepago.
 - Integración bancaria directa — el cobro con tarjeta usa una terminal física (BBVA) independiente; el sistema solo registra método de pago + monto.
-- Crédito a clientes / fiado (confirmado con el cliente que no aplica).
+- Crédito a clientes / fiado.
 - E-commerce
 - App móvil
-
-## Diseño abierto a futuro: multi-sucursal
-No implementado (una sola tienda hoy), pero lo construido no bloquea agregarlo después sin reescritura:
-- `RolUsuario` es un enum simple — agregar `super_admin` es un valor más, siempre que la autorización use el enum y no asuma "solo existen 2 roles" en la lógica.
-- `Auditoria.usuario_id` como actor generaliza solo cuando cada usuario pertenezca a una sucursal, sin cambiar el diseño de la tabla.
-- `Producto.sku`, `Categoria.nombre`, `Proveedor.nombre` son únicos hoy a nivel de toda la base (correcto para una tienda). Si se agrega `sucursal_id`, esa unicidad probablemente pase a ser compuesta — no cambiar ahora, solo tenerlo identificado.
-- Proveedores/reglas de reorden/OpenPay: no se hardcodeó en la lógica de negocio la suposición de "un solo lugar físico".
+- Multi-tenant de base de datos compartida (varios clientes en una sola instalación) — decisión deliberada, ver `docs/CONTROL_PLANE.md`.
 
 ## Stack Oficial
 ### Backend
@@ -89,6 +82,26 @@ Pedido explícito del cliente: el catálogo plano de categorías no reflejaba c�
 4. `stock_resultante` en movimientos de inventario — snapshot histórico correcto, no el stock en vivo del producto.
 5. Restricción de lectura admin-only en Categorías/Subcategorías/Inventario (antes visibles a cualquier logueado).
 6. Unificación visual de todas las páginas de listado (`TableCard`, ancho fluido `w-full`, filtros con "Limpiar filtros", encabezados de tabla con fondo).
+
+### Fase 4 — Multisucursal
+`Sucursal`+`Equipo` (caja registradora física), stock movido de `Producto.stock` a `StockSucursal` (por producto×sucursal), Productos/Inventario/Compras scopeados a la sucursal activa del admin. Detalle completo en `docs/BACKEND.md`/`docs/FRONTEND.md` § Multisucursal.
+
+### Fase 5 — Kiosko del cajero y control de caja
+`VentaKiosco` (pantalla de venta real del cajero), límite de efectivo por caja con control de diferencia al cierre, eventos en tiempo real (SSE) para excedente/caja, feed de "Atención" para el admin.
+
+### Fase 6 — Consolidación operativa
+Control de stock `sin_stock` (alerta cuando no hay ninguna fila de `StockSucursal`, no solo cantidad en 0), hub de Productos organizado por categoría, pantalla de "servidor caído"/reconexión, impresión térmica de tickets/comprobantes vía QZ Tray, primer rebrand de paleta corporativa (azul, tokens muertos limpiados).
+
+### Fase 7 — Devoluciones, cancelaciones y reportes
+Devoluciones y cancelaciones de venta (ventana de 24h, permiso por cajero), utilidad/margen por costo congelado en cada línea de venta, consolidación del hub de Ventas en los 5 bloques actuales (KPIs/Tendencia/Sucursales/Atención/Top productos).
+
+### Fase 8 — Modelo de negocio SaaS y consolidación de UI (Cē)
+Pedido explícito: identificar la empresa detrás del producto y dejar el menú admin realmente consolidado, sin builds a medias.
+1. Identidad de marca **Cē** — nombre, logo, favicon (paleta de color del producto sin cambios, es identidad propia del POS). Ver `docs/FRONTEND.md`.
+2. Rol `superuser` + plan por instalación (cupo de equipos habilitados) + script de aprovisionamiento de clientes nuevos (`scripts/provisionar_cliente.py`). Modelo de negocio documentado en `docs/CONTROL_PLANE.md`.
+3. Consolidación del menú admin: sin Dashboard/"Panel" separado (Ventas es la pantalla de entrada), Sucursales promovida a tab de primer nivel (antes escondida en "Ajustes").
+4. Edición completa de cajero: activar/desactivar, resetear contraseña, cambiar de sucursal (bloqueado si tiene caja abierta) — antes solo se podía editar el nombre.
+5. Reportes exportables: Ventas, Pagos y cobranza, Productos vendidos, Devoluciones y cancelaciones — un botón "Exportar" con las 4 opciones, CSV, respetando siempre los filtros activos del hub. Detalle en `docs/FRONTEND.md`/`docs/BACKEND.md` § Ventas.
 
 ## Reglas
 - Código limpio.

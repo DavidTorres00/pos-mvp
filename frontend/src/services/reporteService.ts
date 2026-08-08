@@ -1,5 +1,4 @@
 import { api } from '@/services/api'
-import type { CajaResumen } from '@/services/cajaService'
 
 export interface SucursalResumen {
   sucursal_id: number
@@ -24,11 +23,6 @@ export interface Alerta {
   sucursal_id: number | null
   equipo_id: number | null
   auditoria_id: number | null
-}
-
-export async function getCajasAbiertas(): Promise<CajaResumen[]> {
-  const { data } = await api.get<CajaResumen[]>('/reportes/cajas-abiertas')
-  return data
 }
 
 export async function getResumenSucursales(): Promise<SucursalResumen[]> {

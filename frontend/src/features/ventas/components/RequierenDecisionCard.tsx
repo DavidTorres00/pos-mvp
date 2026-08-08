@@ -1,4 +1,4 @@
-import { AtencionFeed } from '@/features/dashboard/components/AtencionFeed'
+import { AtencionFeed } from '@/features/ventas/components/AtencionFeed'
 import { formatCurrency } from '@/lib/format'
 import type { Alerta } from '@/services/reporteService'
 
@@ -13,8 +13,8 @@ interface RequierenDecisionCardProps {
 }
 
 // "Atención" del hub de Ventas: devoluciones/cancelaciones del período (mutuamente excluyentes,
-// ver docs/BACKEND.md) arriba, alertas operativas de sucursal/caja/stock abajo — reusa
-// AtencionFeed del Dashboard (`GET /reportes/atencion`), filtrado a la sucursal seleccionada.
+// ver docs/BACKEND.md) arriba, alertas operativas de sucursal/caja/stock abajo — vía
+// AtencionFeed (`GET /reportes/atencion`), filtrado a la sucursal seleccionada.
 export function RequierenDecisionCard({
   alertas,
   onAcusar,

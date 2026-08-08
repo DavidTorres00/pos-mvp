@@ -1,6 +1,5 @@
 import { lazy } from 'react'
 
-export const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
 export const AuditoriaPage = lazy(() => import('@/pages/AuditoriaPage').then((m) => ({ default: m.AuditoriaPage })))
 export const UsuariosPage = lazy(() => import('@/pages/UsuariosPage').then((m) => ({ default: m.UsuariosPage })))
 export const ProveedoresPage = lazy(() =>
@@ -17,3 +16,4 @@ export const VentasPage = lazy(() => import('@/pages/VentasPage').then((m) => ({
 export const SucursalesPage = lazy(() =>
   import('@/pages/SucursalesPage').then((m) => ({ default: m.SucursalesPage })),
 )
+export const PlanPage = lazy(() => import('@/pages/PlanPage').then((m) => ({ default: m.PlanPage })))

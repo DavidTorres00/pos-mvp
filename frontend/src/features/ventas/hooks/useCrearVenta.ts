@@ -15,7 +15,6 @@ export function useCrearVenta() {
       ['movimientos'],
       ['caja-actual'],
       ['caja-resumen'],
-      ['cajas-abiertas'],
       ['resumen-sucursales'],
     ],
   )

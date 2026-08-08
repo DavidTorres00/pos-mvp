@@ -12,6 +12,8 @@ from app.schemas.cancelacion import CancelacionCreate, CancelacionOut
 from app.schemas.devolucion import DevolucionCreate, DevolucionOut
 from app.schemas.pagination import Pagina
 from app.schemas.venta import (
+    MovimientoReversaOut,
+    ProductoReporteOut,
     ProductoVentaOut,
     VentaCreate,
     VentaOut,
@@ -93,6 +95,62 @@ def mas_vendidos(
     return [
         ProductoVentaOut(producto_id=pid, producto_nombre=nombre, cantidad=cantidad, total_vendido=monto)
         for pid, nombre, cantidad, monto in items
+    ]
+
+
+@router.get("/reporte-productos", response_model=list[ProductoReporteOut])
+def reporte_productos(
+    desde: datetime | None = None,
+    hasta: datetime | None = None,
+    forma_pago: FormaPago | None = None,
+    sucursal_id: int | None = None,
+    usuario_id: int | None = None,
+    db: Session = Depends(get_db),
+) -> list[ProductoReporteOut]:
+    """Base del export "Productos vendidos" (`docs/REPORTES_EXPORTACION.md`) — a diferencia de
+    `/mas-vendidos` (top-N para la card en pantalla), esta trae todos los productos con ≥1
+    venta en el rango, con SKU/categoría/utilidad/margen, sin recorte."""
+    items = venta_service.reporte_productos(db, desde, hasta, forma_pago, sucursal_id, usuario_id)
+    return [
+        ProductoReporteOut(
+            producto_id=pid,
+            sku=sku,
+            producto_nombre=nombre,
+            categoria_nombre=categoria,
+            cantidad=cantidad,
+            total_vendido=monto,
+            utilidad_total=utilidad,
+            margen_pct=margen,
+        )
+        for pid, sku, nombre, categoria, cantidad, monto, utilidad, margen in items
+    ]
+
+
+@router.get("/devoluciones-cancelaciones", response_model=list[MovimientoReversaOut])
+def devoluciones_y_cancelaciones(
+    desde: datetime | None = None,
+    hasta: datetime | None = None,
+    forma_pago: FormaPago | None = None,
+    sucursal_id: int | None = None,
+    usuario_id: int | None = None,
+    db: Session = Depends(get_db),
+) -> list[MovimientoReversaOut]:
+    """Base del export "Devoluciones y cancelaciones" (`docs/REPORTES_EXPORTACION.md`) — el
+    resumen agregado (monto+cantidad) sigue viviendo en `/resumen`, esto es el detalle fila por
+    fila para auditoría/revisión."""
+    filas = venta_service.devoluciones_y_cancelaciones(db, desde, hasta, forma_pago, sucursal_id, usuario_id)
+    return [
+        MovimientoReversaOut(
+            tipo=tipo,
+            id=mid,
+            venta_id=venta_id,
+            created_at=created_at,
+            sucursal_nombre=sucursal_nombre,
+            actor_nombre=actor_nombre,
+            motivo=motivo,
+            monto_total=monto_total,
+        )
+        for tipo, mid, venta_id, created_at, sucursal_nombre, actor_nombre, motivo, monto_total in filas
     ]
 
 

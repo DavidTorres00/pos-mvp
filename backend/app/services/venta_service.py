@@ -151,6 +151,36 @@ def mas_vendidos(
     return items[:limite]
 
 
+def reporte_productos(
+    db: Session,
+    desde: datetime | None,
+    hasta: datetime | None,
+    forma_pago: FormaPago | None,
+    sucursal_id: int | None,
+    usuario_id: int | None,
+) -> list[tuple[int, str, str, str | None, int, Decimal, Decimal, Decimal | None]]:
+    return venta_repository.reporte_productos(db, desde, hasta, forma_pago, sucursal_id, usuario_id)
+
+
+def devoluciones_y_cancelaciones(
+    db: Session,
+    desde: datetime | None,
+    hasta: datetime | None,
+    forma_pago: FormaPago | None,
+    sucursal_id: int | None,
+    usuario_id: int | None,
+) -> list[tuple[str, int, int, datetime, str | None, str, str, Decimal]]:
+    """Devoluciones y cancelaciones del rango, unificadas y ordenadas por fecha desc — base del
+    reporte exportable homónimo (`docs/REPORTES_EXPORTACION.md`). Dos tablas distintas
+    (`Devolucion`/`Cancelacion`, ver docs/BACKEND.md) mezcladas en Python: son pocas filas por
+    período típico, no vale la pena un `UNION` SQL para esto."""
+    devoluciones = devolucion_repository.listar_periodo(db, desde, hasta, forma_pago, sucursal_id, usuario_id)
+    cancelaciones = cancelacion_repository.listar_periodo(db, desde, hasta, forma_pago, sucursal_id, usuario_id)
+    filas = [("devolucion", *fila) for fila in devoluciones] + [("cancelacion", *fila) for fila in cancelaciones]
+    filas.sort(key=lambda fila: fila[3], reverse=True)
+    return filas
+
+
 def por_dia(
     db: Session,
     desde: datetime | None,

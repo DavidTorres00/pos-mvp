@@ -6,7 +6,7 @@ export interface Usuario {
   email: string
   nombre: string
   activo: boolean
-  role: 'admin' | 'cajero'
+  role: 'admin' | 'cajero' | 'superuser'
   puede_retirar_excedente: boolean
   puede_hacer_devoluciones: boolean
 }

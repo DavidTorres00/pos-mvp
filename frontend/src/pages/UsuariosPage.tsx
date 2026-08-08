@@ -1,17 +1,23 @@
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { TableCard } from '@/components/TableCard'
+import { UsuarioEditForm } from '@/features/usuarios/components/UsuarioEditForm'
 import { UsuarioForm } from '@/features/usuarios/components/UsuarioForm'
-import { UsuarioNombreForm } from '@/features/usuarios/components/UsuarioNombreForm'
+import { UsuarioPasswordForm } from '@/features/usuarios/components/UsuarioPasswordForm'
 import { UsuariosTable } from '@/features/usuarios/components/UsuariosTable'
 import {
-  useActualizarNombreUsuario,
+  useActualizarUsuario,
   useCrearUsuario,
+  useResetearPasswordUsuario,
   useSetPermisoDevoluciones,
   useSetPermisoRetiroExcedente,
 } from '@/features/usuarios/hooks/useUsuarioMutations'
 import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios'
-import type { UsuarioCreateFormValues, UsuarioNombreFormValues } from '@/features/usuarios/schemas/usuarioSchema'
+import type {
+  UsuarioCreateFormValues,
+  UsuarioEditFormValues,
+  UsuarioPasswordFormValues,
+} from '@/features/usuarios/schemas/usuarioSchema'
 import { useSucursales } from '@/features/sucursales/hooks/useSucursales'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { useCrudDialogState } from '@/lib/hooks/useCrudDialogState'
@@ -28,9 +34,12 @@ export function UsuariosPage() {
   const pageCount = Math.max(1, Math.ceil(total / size))
   const setPermiso = useSetPermisoRetiroExcedente()
   const setPermisoDevoluciones = useSetPermisoDevoluciones()
+  const setActivo = useActualizarUsuario()
   const dialog = useCrudDialogState<Usuario>()
+  const passwordDialog = useCrudDialogState<Usuario>()
   const create = useCrearUsuario()
-  const actualizarNombre = useActualizarNombreUsuario()
+  const actualizar = useActualizarUsuario()
+  const resetearPassword = useResetearPasswordUsuario()
   const { data: sucursalesData } = useSucursales('', 1, 100, isAdmin)
   // con 1 sola sucursal activa, la columna sería el mismo valor repetido en cada fila (ver
   // docs/FRONTEND.md) — mismo criterio que showSucursal en VentasTable/ProductosTable
@@ -40,9 +49,24 @@ export function UsuariosPage() {
     create.mutate({ ...values, sucursal_id: values.sucursal_id as number }, { onSuccess: dialog.closeCreate })
   }
 
-  function handleActualizarNombre(values: UsuarioNombreFormValues) {
+  function handleActualizar(values: UsuarioEditFormValues) {
     if (dialog.editing === null) return
-    actualizarNombre.mutate({ id: dialog.editing.id, nombre: values.nombre }, { onSuccess: dialog.closeEdit })
+    actualizar.mutate(
+      { id: dialog.editing.id, nombre: values.nombre, email: values.email, sucursal_id: values.sucursal_id as number },
+      { onSuccess: dialog.closeEdit },
+    )
+  }
+
+  function handleResetearPassword(values: UsuarioPasswordFormValues) {
+    if (passwordDialog.editing === null) return
+    resetearPassword.mutate(
+      { id: passwordDialog.editing.id, password: values.password },
+      { onSuccess: passwordDialog.closeEdit },
+    )
+  }
+
+  function handleToggleActivo(usuario: Usuario) {
+    setActivo.mutate({ id: usuario.id, activo: !usuario.activo })
   }
 
   if (!isAdmin) {
@@ -89,20 +113,41 @@ export function UsuariosPage() {
       <Dialog open={dialog.editing !== null} onOpenChange={(open) => !open && dialog.closeEdit()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar nombre</DialogTitle>
+            <DialogTitle>Editar cajero</DialogTitle>
           </DialogHeader>
           {dialog.editing && (
-            <UsuarioNombreForm
-              defaultValues={{ nombre: dialog.editing.nombre }}
-              isPending={actualizarNombre.isPending}
+            <UsuarioEditForm
+              defaultValues={{
+                nombre: dialog.editing.nombre,
+                email: dialog.editing.email,
+                sucursal_id: dialog.editing.sucursal_id,
+              }}
+              isPending={actualizar.isPending}
               errorMessage={
-                actualizarNombre.isError
-                  ? getApiErrorMessage(actualizarNombre.error, 'No se pudo actualizar el nombre')
-                  : undefined
+                actualizar.isError ? getApiErrorMessage(actualizar.error, 'No se pudo actualizar el cajero') : undefined
               }
-              onSubmit={handleActualizarNombre}
+              onSubmit={handleActualizar}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordDialog.editing !== null} onOpenChange={(open) => !open && passwordDialog.closeEdit()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Restablecer contraseña{passwordDialog.editing ? ` · ${passwordDialog.editing.nombre}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <UsuarioPasswordForm
+            isPending={resetearPassword.isPending}
+            errorMessage={
+              resetearPassword.isError
+                ? getApiErrorMessage(resetearPassword.error, 'No se pudo restablecer la contraseña')
+                : undefined
+            }
+            onSubmit={handleResetearPassword}
+          />
         </DialogContent>
       </Dialog>
 
@@ -118,9 +163,12 @@ export function UsuariosPage() {
           usuarios={usuarios}
           onToggleExcedente={handleToggleExcedente}
           onToggleDevoluciones={handleToggleDevoluciones}
+          onToggleActivo={handleToggleActivo}
           onEdit={dialog.edit}
+          onResetPassword={passwordDialog.edit}
           pendingExcedente={setPermiso.isPending}
           pendingDevoluciones={setPermisoDevoluciones.isPending}
+          pendingActivo={setActivo.isPending}
           showSucursal={mostrarColumnaSucursal}
         />
       </TableCard>

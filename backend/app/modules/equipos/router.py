@@ -8,7 +8,7 @@ from app.models.usuario import RolUsuario
 from app.schemas.equipo import EquipoCreate, EquipoEstado, EquipoOut, EquipoUpdate
 from app.schemas.pagination import Pagina
 from app.services import equipo_service
-from app.services.equipo_service import EquipoNoEncontradoError, NombreDuplicadoError
+from app.services.equipo_service import EquipoNoEncontradoError, LimiteEquiposAlcanzadoError, NombreDuplicadoError
 
 router = APIRouter(prefix="/equipos", tags=["equipos"], dependencies=[Depends(require_role(RolUsuario.ADMIN))])
 
@@ -29,6 +29,11 @@ def crear(payload: EquipoCreate, db: Session = Depends(get_db)) -> EquipoOut:
         return equipo_service.crear(db, payload.sucursal_id, payload.nombre)
     except NombreDuplicadoError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El nombre ya está en uso")
+    except LimiteEquiposAlcanzadoError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Alcanzaste el límite de {e.limite} equipos de tu plan. Contacta a soporte para ampliarlo.",
+        )
 
 
 @router.put("/{equipo_id}", response_model=EquipoOut)
@@ -47,3 +52,8 @@ def cambiar_estado(equipo_id: int, payload: EquipoEstado, db: Session = Depends(
         return equipo_service.cambiar_estado(db, equipo_id, payload.activo)
     except EquipoNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipo no encontrado")
+    except LimiteEquiposAlcanzadoError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Alcanzaste el límite de {e.limite} equipos de tu plan. Contacta a soporte para ampliarlo.",
+        )

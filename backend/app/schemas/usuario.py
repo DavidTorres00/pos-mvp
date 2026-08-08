@@ -30,5 +30,16 @@ class UsuarioPermisosUpdate(BaseModel):
     puede_hacer_devoluciones: bool | None = None
 
 
-class UsuarioNombreUpdate(BaseModel):
-    nombre: str = Field(min_length=1, max_length=255)
+class UsuarioUpdate(BaseModel):
+    # todos opcionales (PATCH parcial, "editar cajero" consolidado) — a diferencia de
+    # ConfiguracionNegocioUpdate, acá `None` significa "no tocar este campo", nunca "vaciarlo":
+    # nombre/email/sucursal_id son NOT NULL a nivel de modelo (sucursal_id además forzado por
+    # CHECK para cajero), no existe un valor "vacío" válido que mandar.
+    nombre: str | None = Field(default=None, min_length=1, max_length=255)
+    email: EmailStr | None = None
+    sucursal_id: int | None = None
+    activo: bool | None = None
+
+
+class UsuarioPasswordUpdate(BaseModel):
+    password: str = Field(min_length=8, max_length=72)

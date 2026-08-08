@@ -43,7 +43,7 @@
 }
 
 :root {
-    /* Paleta corporativa MVP POS — 4 colores de marca (Primario/Acento/Fondo/Texto);
+    /* Paleta corporativa Cē POS — 4 colores de marca (Primario/Acento/Fondo/Texto);
        todo lo demás es alias o derivado, nada de literales duplicados a mano. */
     --primario: oklch(0.48 0.13 252.5);
     --acento: oklch(0.62 0.149 251.5);

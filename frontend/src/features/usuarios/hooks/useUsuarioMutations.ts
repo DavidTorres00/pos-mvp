@@ -2,11 +2,13 @@ import { useApiMutation } from '@/lib/hooks/useApiMutation'
 import {
   cerrarCajaDeUsuario,
   createUsuario,
+  resetearPasswordUsuario,
   retirarExcedenteDeUsuario,
   setPermisoDevoluciones,
   setPermisoRetiroExcedente,
-  updateNombreUsuario,
+  updateUsuario,
   type UsuarioCreatePayload,
+  type UsuarioUpdatePayload,
 } from '@/services/usuarioService'
 
 export function useSetPermisoRetiroExcedente() {
@@ -25,8 +27,15 @@ export function useSetPermisoDevoluciones() {
   )
 }
 
-export function useActualizarNombreUsuario() {
-  return useApiMutation(({ id, nombre }: { id: number; nombre: string }) => updateNombreUsuario(id, nombre), [['usuarios']])
+export function useActualizarUsuario() {
+  return useApiMutation(
+    ({ id, ...payload }: { id: number } & UsuarioUpdatePayload) => updateUsuario(id, payload),
+    [['usuarios']],
+  )
+}
+
+export function useResetearPasswordUsuario() {
+  return useApiMutation(({ id, password }: { id: number; password: string }) => resetearPasswordUsuario(id, password), [['usuarios']])
 }
 
 export function useCrearUsuario() {
@@ -37,13 +46,13 @@ export function useCerrarCajaDeUsuario() {
   return useApiMutation(
     ({ id, monto_final, motivo_diferencia }: { id: number; monto_final: number; motivo_diferencia?: string | null }) =>
       cerrarCajaDeUsuario(id, monto_final, motivo_diferencia),
-    [['caja-de-usuario'], ['cajas-abiertas'], ['usuarios'], ['sucursal-cajas'], ['resumen-sucursales']],
+    [['caja-de-usuario'], ['usuarios'], ['sucursal-cajas'], ['resumen-sucursales']],
   )
 }
 
 export function useRetirarExcedenteDeUsuario() {
   return useApiMutation(
     (id: number) => retirarExcedenteDeUsuario(id),
-    [['caja-de-usuario'], ['cajas-abiertas'], ['auditoria'], ['sucursal-cajas'], ['resumen-sucursales']],
+    [['caja-de-usuario'], ['auditoria'], ['sucursal-cajas'], ['resumen-sucursales']],
   )
 }

@@ -10,11 +10,11 @@ from app.models.usuario import RolUsuario, Usuario
 from app.schemas.auth import LoginRequest
 from app.schemas.caja import CajaActualOut, CajaCerrarRequest, CajaResumenOut, VoucherRetiroOut
 from app.schemas.pagination import Pagina
-from app.schemas.usuario import UsuarioCreate, UsuarioNombreUpdate, UsuarioOut, UsuarioPermisosUpdate
+from app.schemas.usuario import UsuarioCreate, UsuarioOut, UsuarioPasswordUpdate, UsuarioPermisosUpdate, UsuarioUpdate
 from app.services import auth_service, caja_service, usuario_service
 from app.services.auth_service import CajaAbiertaPropiaError
 from app.services.caja_service import CajaNoAbiertaError, MotivoDiferenciaRequeridoError, SinExcedenteError
-from app.services.usuario_service import EmailDuplicadoError, UsuarioNoEncontradoError
+from app.services.usuario_service import CajaAbiertaError, EmailDuplicadoError, UsuarioNoEncontradoError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 usuarios_router = APIRouter(
@@ -95,15 +95,37 @@ def crear(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya está registrado")
 
 
-@usuarios_router.patch("/{usuario_id}/nombre", response_model=UsuarioOut)
-def actualizar_nombre(
+@usuarios_router.patch("/{usuario_id}", response_model=UsuarioOut)
+def actualizar(
     usuario_id: int,
-    payload: UsuarioNombreUpdate,
+    payload: UsuarioUpdate,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ) -> UsuarioOut:
     try:
-        return usuario_service.actualizar_nombre(db, usuario.id, usuario_id, payload.nombre)
+        return usuario_service.actualizar(
+            db, usuario.id, usuario_id, payload.nombre, payload.email, payload.sucursal_id, payload.activo
+        )
+    except UsuarioNoEncontradoError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    except EmailDuplicadoError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya está registrado")
+    except CajaAbiertaError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El cajero tiene una caja abierta. Ciérrala antes de cambiarlo de sucursal o desactivarlo.",
+        )
+
+
+@usuarios_router.post("/{usuario_id}/resetear-password", response_model=UsuarioOut)
+def resetear_password(
+    usuario_id: int,
+    payload: UsuarioPasswordUpdate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+) -> UsuarioOut:
+    try:
+        return usuario_service.resetear_password(db, usuario.id, usuario_id, payload.password)
     except UsuarioNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { DownloadIcon } from 'lucide-react'
+import { ChevronDownIcon, DownloadIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,7 +17,7 @@ import { VentaDetalleDialog } from '@/features/ventas/components/VentaDetalleDia
 import { VentaKiosco } from '@/features/ventas/components/VentaKiosco'
 import { VentasPorDiaChart } from '@/features/ventas/components/VentasPorDiaChart'
 import { VentasTable } from '@/features/ventas/components/VentasTable'
-import { useAcusarAlerta } from '@/features/dashboard/hooks/useAcusarAlerta'
+import { useAcusarAlerta } from '@/features/ventas/hooks/useAcusarAlerta'
 import { useMasVendidos } from '@/features/ventas/hooks/useMasVendidos'
 import { useResumenVentas } from '@/features/ventas/hooks/useResumenVentas'
 import { useVentas } from '@/features/ventas/hooks/useVentas'
@@ -25,9 +26,17 @@ import { useVentasPorSucursal } from '@/features/ventas/hooks/useVentasPorSucurs
 import { useSucursales } from '@/features/sucursales/hooks/useSucursales'
 import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios'
 import { usePagination } from '@/lib/hooks/usePagination'
+import { descargarCsv, filasACsv } from '@/lib/csv'
 import { formatCurrency, formatDateTime } from '@/lib/format'
 import { getAtencion, getResumenSucursales, type Alerta } from '@/services/reporteService'
-import { FORMA_PAGO_LABELS, listVentas, type FormaPago, type Venta } from '@/services/ventaService'
+import {
+  FORMA_PAGO_LABELS,
+  getDevolucionesCancelaciones,
+  getReporteProductos,
+  listVentas,
+  type FormaPago,
+  type Venta,
+} from '@/services/ventaService'
 import { useAuthStore } from '@/stores/authStore'
 
 // sentinel fuera del rango real de ids de Sucursal (autoincremental, siempre > 0) — representa
@@ -180,43 +189,107 @@ export function VentasPage() {
     acusarAlerta.mutate({ tipo: alerta.tipo, referenciaId: alerta.auditoria_id })
   }
 
-  async function exportarCSV() {
+  // páginas de 100 hasta MAX_FILAS_EXPORTAR — mismo tope y misma nota de corte en las 4
+  // exportaciones (docs/REPORTES_EXPORTACION.md): honesto sobre qué se cortó en vez de truncar
+  // en silencio.
+  async function paginarVentas(): Promise<{ ventas: Venta[]; total: number }> {
+    const primera = await listVentas({ ...filtrosActivos, page: 1, size: 100 })
+    const filasDisponibles = Math.min(primera.total, MAX_FILAS_EXPORTAR)
+    const totalPaginas = Math.max(1, Math.ceil(filasDisponibles / 100))
+    const todas = [...primera.items]
+    for (let p = 2; p <= totalPaginas; p++) {
+      const resp = await listVentas({ ...filtrosActivos, page: p, size: 100 })
+      todas.push(...resp.items)
+    }
+    return { ventas: todas, total: primera.total }
+  }
+
+  function notaCorte(mostradas: number, total: number, entidad: string): string | undefined {
+    return total > mostradas
+      ? `Mostrando ${mostradas} de ${total} ${entidad} que coinciden con el filtro — acota el rango de fechas para exportar el resto.`
+      : undefined
+  }
+
+  async function exportarVentasCSV() {
     if (exportando) return
     setExportando(true)
     try {
-      const primera = await listVentas({ ...filtrosActivos, page: 1, size: 100 })
-      const filasDisponibles = Math.min(primera.total, MAX_FILAS_EXPORTAR)
-      const totalPaginas = Math.max(1, Math.ceil(filasDisponibles / 100))
-      const todas = [...primera.items]
-      for (let p = 2; p <= totalPaginas; p++) {
-        const resp = await listVentas({ ...filtrosActivos, page: p, size: 100 })
-        todas.push(...resp.items)
-      }
-      const encabezado = ['Folio', 'Fecha', 'Sucursal', 'Cajero', 'Total', 'Forma de pago']
-      const filas = todas.map((v) => [
-        v.id,
-        formatDateTime(v.created_at),
-        v.sucursal_nombre,
-        v.usuario_nombre,
-        v.total,
-        FORMA_PAGO_LABELS[v.forma_pago],
-      ])
-      const lineas = [encabezado, ...filas].map((fila) =>
-        fila.map((valor) => `"${String(valor).replaceAll('"', '""')}"`).join(','),
+      const { ventas: todas, total } = await paginarVentas()
+      const csv = filasACsv(
+        ['Folio', 'Fecha', 'Sucursal', 'Cajero', 'Total', 'Forma de pago'],
+        todas.map((v) => [v.id, formatDateTime(v.created_at), v.sucursal_nombre, v.usuario_nombre, v.total, FORMA_PAGO_LABELS[v.forma_pago]]),
+        notaCorte(todas.length, total, 'ventas'),
       )
-      if (primera.total > todas.length) {
-        lineas.push(
-          `"Mostrando ${todas.length} de ${primera.total} ventas que coinciden con el filtro — acota el rango de fechas para exportar el resto."`,
-        )
-      }
-      const csv = `﻿${lineas.join('\n')}`
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const enlace = document.createElement('a')
-      enlace.href = url
-      enlace.download = `ventas_${toYMD(new Date())}.csv`
-      enlace.click()
-      URL.revokeObjectURL(url)
+      descargarCsv(csv, `ventas_${toYMD(new Date())}.csv`)
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  async function exportarPagosCSV() {
+    if (exportando) return
+    setExportando(true)
+    try {
+      const { ventas: todas, total } = await paginarVentas()
+      const csv = filasACsv(
+        ['Folio', 'Fecha', 'Sucursal', 'Método de pago', 'Importe', 'Estado'],
+        todas.map((v) => [
+          v.id,
+          formatDateTime(v.created_at),
+          v.sucursal_nombre,
+          FORMA_PAGO_LABELS[v.forma_pago],
+          v.total,
+          v.estado === 'cancelada' ? 'Cancelada' : 'Completada',
+        ]),
+        notaCorte(todas.length, total, 'ventas'),
+      )
+      descargarCsv(csv, `pagos-cobranza_${toYMD(new Date())}.csv`)
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  async function exportarProductosCSV() {
+    if (exportando) return
+    setExportando(true)
+    try {
+      const productos = await getReporteProductos(filtrosActivos)
+      const csv = filasACsv(
+        ['SKU', 'Producto', 'Categoría', 'Cantidad vendida', 'Ventas', 'Utilidad', 'Margen'],
+        productos.map((p) => [
+          p.sku,
+          p.producto_nombre,
+          p.categoria_nombre ?? '—',
+          p.cantidad,
+          p.total_vendido,
+          p.utilidad_total,
+          p.margen_pct !== null ? `${Number(p.margen_pct).toFixed(1)}%` : 'Sin datos',
+        ]),
+      )
+      descargarCsv(csv, `productos-vendidos_${toYMD(new Date())}.csv`)
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  async function exportarDevolucionesCSV() {
+    if (exportando) return
+    setExportando(true)
+    try {
+      const movimientos = await getDevolucionesCancelaciones(filtrosActivos)
+      const csv = filasACsv(
+        ['Tipo', 'Folio venta', 'Fecha', 'Sucursal', 'Usuario', 'Importe', 'Motivo'],
+        movimientos.map((m) => [
+          m.tipo === 'devolucion' ? 'Devolución' : 'Cancelación',
+          m.venta_id,
+          formatDateTime(m.created_at),
+          m.sucursal_nombre ?? '—',
+          m.actor_nombre,
+          m.monto_total,
+          m.motivo,
+        ]),
+      )
+      descargarCsv(csv, `devoluciones-cancelaciones_${toYMD(new Date())}.csv`)
     } finally {
       setExportando(false)
     }
@@ -277,10 +350,21 @@ export function VentasPage() {
             </h1>
             {seleccionada?.direccion && <p className="text-sm text-muted-foreground">{seleccionada.direccion}</p>}
           </div>
-          <Button variant="outline" size="sm" onClick={exportarCSV} disabled={exportando} className="gap-1.5">
-            <DownloadIcon className="size-4" />
-            {exportando ? 'Exportando...' : 'Exportar CSV'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={exportando} className="gap-1.5">
+                <DownloadIcon className="size-4" />
+                {exportando ? 'Exportando...' : 'Exportar'}
+                <ChevronDownIcon className="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportarVentasCSV}>Ventas</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportarPagosCSV}>Pagos y cobranza</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportarProductosCSV}>Productos vendidos</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportarDevolucionesCSV}>Devoluciones y cancelaciones</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="flex flex-wrap gap-2">

@@ -10,9 +10,11 @@ export function LoginPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated())
 
   if (isAuthenticated) {
-    // el cajero cae directo en su pantalla de venta (que ya exige caja abierta antes de
-    // dejarlo pasar, ver ProtectedLayout) en vez del Dashboard, que es vista de admin
-    return <Navigate to={usuario?.role === 'cajero' ? '/ventas' : '/'} replace />
+    // cajero y admin caen ambos en Ventas (el cajero exige caja abierta antes de dejarlo
+    // pasar, ver ProtectedLayout; para el admin es la pantalla de entrada, ya no hay Dashboard
+    // separado); el superuser tiene una única pantalla propia
+    const destino = usuario?.role === 'superuser' ? '/plan' : '/ventas'
+    return <Navigate to={destino} replace />
   }
 
   return (

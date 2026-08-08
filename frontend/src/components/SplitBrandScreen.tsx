@@ -7,7 +7,7 @@ interface SplitBrandScreenProps {
   children: ReactNode
   // 'center' (default, Login/AbrirCaja): contenido centrado en el panel derecho, con su propio
   // padding más generoso. 'start': el borde superior del contenido queda a la misma altura que
-  // "MVP POS" del panel de marca (mismo padding-top exacto que el <aside>) — para pantallas con
+  // "Cē POS" del panel de marca (mismo padding-top exacto que el <aside>) — para pantallas con
   // más contenido (listas, badges) que una pantalla centrada tipo formulario.
   align?: 'center' | 'start'
 }
@@ -27,7 +27,10 @@ export function SplitBrandScreen({ footer, children, align = 'center' }: SplitBr
         <aside className="hidden w-[clamp(320px,28vw,480px)] shrink-0 flex-col justify-between bg-primary p-[clamp(2.5rem,4vw,4rem)] text-primary-foreground sm:flex">
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-4">
-              <div className="font-heading text-lg font-bold tracking-tight">MVP POS</div>
+              <div className="flex items-center gap-2.5 font-heading text-lg font-bold tracking-tight">
+                <img src="/logo-ce-fondo-oscuro.svg" alt="" aria-hidden className="size-7" />
+                Cē POS
+              </div>
               <div className="border-t border-primary-foreground/25" />
             </div>
             <h1 className="text-[clamp(2.5rem,4.5vw,4.5rem)] font-bold tracking-tight">
@@ -40,7 +43,8 @@ export function SplitBrandScreen({ footer, children, align = 'center' }: SplitBr
         </aside>
 
         <div className="flex items-center gap-2 bg-primary px-4 py-3 text-primary-foreground sm:hidden">
-          <span className="font-heading text-sm font-semibold tracking-tight">MVP POS</span>
+          <img src="/logo-ce-fondo-oscuro.svg" alt="" aria-hidden className="size-4" />
+          <span className="font-heading text-sm font-semibold tracking-tight">Cē POS</span>
         </div>
 
         <div

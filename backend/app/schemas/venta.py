@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -52,6 +53,28 @@ class ProductoVentaOut(BaseModel):
     producto_nombre: str
     cantidad: int
     total_vendido: Decimal
+
+
+class MovimientoReversaOut(BaseModel):
+    tipo: Literal["devolucion", "cancelacion"]
+    id: int
+    venta_id: int
+    created_at: datetime
+    sucursal_nombre: str | None
+    actor_nombre: str
+    motivo: str
+    monto_total: Decimal
+
+
+class ProductoReporteOut(BaseModel):
+    producto_id: int
+    sku: str
+    producto_nombre: str
+    categoria_nombre: str | None
+    cantidad: int
+    total_vendido: Decimal
+    utilidad_total: Decimal
+    margen_pct: Decimal | None
 
 
 class VentaPorDiaOut(BaseModel):

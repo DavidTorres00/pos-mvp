@@ -4,7 +4,6 @@ import {
   BoxesIcon,
   ChevronDownIcon,
   ClipboardListIcon,
-  LayoutDashboardIcon,
   Maximize2Icon,
   MenuIcon,
   Minimize2Icon,
@@ -12,7 +11,6 @@ import {
   ReceiptIcon,
   SettingsIcon,
   Building2Icon,
-  StoreIcon,
   TruckIcon,
   UsersIcon,
   XIcon,
@@ -42,18 +40,18 @@ import { useServidorStore } from '@/stores/servidorStore'
 interface NavItem {
   to: string
   label: string
-  icon: typeof LayoutDashboardIcon
+  icon: typeof ReceiptIcon
   end?: boolean
 }
 
-// tab suelto (Panel, Ventas) vs. tab con submenú desplegable (agrupa módulos afines) — el
-// topbar del admin reemplaza a la sidebar clásica (ver `if (esCajero)` más abajo para el chrome
-// del cajero, que es un topbar distinto y no pasa por esta lista)
+// tab suelto (Ventas, Proveedores, Sucursales, Auditoría) vs. tab con submenú desplegable
+// (agrupa módulos afines) — el topbar del admin reemplaza a la sidebar clásica (ver
+// `if (esCajero)` más abajo para el chrome del cajero, que es un topbar distinto y no pasa por
+// esta lista). Sin Dashboard/"Panel": Ventas es la pantalla de entrada (ver routes.tsx).
 type TopbarGroup = ({ type: 'link' } & NavItem) | { type: 'menu'; label: string; links: NavItem[] }
 
 const TOPBAR_GROUPS: TopbarGroup[] = [
-  { type: 'link', to: '/', label: 'Panel', end: true, icon: LayoutDashboardIcon },
-  { type: 'link', to: '/ventas', label: 'Ventas', icon: ReceiptIcon },
+  { type: 'link', to: '/ventas', label: 'Ventas', end: true, icon: ReceiptIcon },
   {
     type: 'menu',
     label: 'Catálogo',
@@ -63,13 +61,13 @@ const TOPBAR_GROUPS: TopbarGroup[] = [
     ],
   },
   { type: 'link', to: '/proveedores', label: 'Proveedores', icon: TruckIcon },
+  { type: 'link', to: '/sucursales', label: 'Sucursales', icon: Building2Icon },
   { type: 'link', to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon },
   {
     type: 'menu',
     label: 'Ajustes',
     links: [
       { to: '/usuarios', label: 'Usuarios', icon: UsersIcon },
-      { to: '/sucursales', label: 'Sucursales', icon: Building2Icon },
       { to: '/configuracion', label: 'Configuración', icon: SettingsIcon },
     ],
   },
@@ -147,6 +145,7 @@ export function ProtectedLayout() {
   const terminandoTurnoRef = useRef(false)
   const [pantallaCompleta, setPantallaCompleta] = useState(() => document.fullscreenElement !== null)
   const esCajero = usuario?.role === 'cajero'
+  const esSuperuser = usuario?.role === 'superuser'
   const { data: cajaActual, isLoading: isLoadingCaja } = useCajaActual(esCajero)
   useCajaEventos(esCajero)
 
@@ -211,6 +210,43 @@ export function ProtectedLayout() {
 
   const logoutError = logout.isError ? getApiErrorMessage(logout.error, 'No se pudo cerrar sesión') : undefined
 
+  // el superuser (dueño de Soluciones Web) no es un rol de negocio del cliente: sin sidebar, sin
+  // topbar de módulos, una sola pantalla — gestiona el cupo de equipos de esta instalación y
+  // nada más (ver docs/BACKEND.md). Lock total a /plan: cualquier otra ruta redirige ahí, no
+  // tiene sentido que este rol navegue a Ventas/Productos/etc.
+  if (esSuperuser) {
+    if (location.pathname !== '/plan') {
+      return <Navigate to="/plan" replace />
+    }
+    return (
+      <div className="flex min-h-svh flex-col">
+        <header className="flex h-14 items-center gap-4 border-b border-sidebar-border bg-sidebar px-4 text-sidebar-foreground shadow-sm sm:px-6">
+          <div className="flex items-center gap-2.5 font-heading text-base font-semibold tracking-tight">
+            <img src="/logo-ce-fondo-claro.svg" alt="" aria-hidden className="size-8" />
+            Cē POS
+            <span className="ml-1 rounded-full bg-sidebar-primary/10 px-2 py-0.5 text-[10px] font-medium tracking-wide text-sidebar-primary uppercase">
+              Superuser
+            </span>
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            {usuario && (
+              <span className="hidden truncate text-xs text-sidebar-foreground/60 lg:inline">{usuario.nombre}</span>
+            )}
+            <Button variant="outline" size="sm" onClick={() => logout.mutate()} disabled={logout.isPending}>
+              Cerrar sesión
+            </Button>
+          </div>
+        </header>
+
+        {logoutError && <p className="px-4 pt-2 text-xs text-destructive sm:px-6">{logoutError}</p>}
+
+        <Suspense fallback={<LoadingState />}>
+          <Outlet />
+        </Suspense>
+      </div>
+    )
+  }
+
   // con caja abierta, el cajero pasa a un chrome propio (topbar, sin sidebar): no hay
   // Dashboard para este rol, así que la ruta índice cae directo en Ventas
   if (esCajero) {
@@ -221,9 +257,9 @@ export function ProtectedLayout() {
       <div className="flex h-svh flex-col overflow-hidden">
         <header className="flex shrink-0 flex-col gap-3 bg-primary px-4 py-3 text-primary-foreground shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
-              <StoreIcon className="size-5" />
-              MVP POS
+            <div className="flex items-center gap-2.5 font-heading text-base font-semibold tracking-tight">
+              <img src="/logo-ce-fondo-oscuro.svg" alt="" aria-hidden className="size-8" />
+              Cē POS
             </div>
             <nav aria-label="Principal" className="flex items-center gap-1">
               <NavLink to="/ventas" end className={cajeroNavLinkClass}>
@@ -313,9 +349,9 @@ export function ProtectedLayout() {
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-40 border-b border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm">
         <div className="flex h-14 items-center gap-2 px-4 sm:px-6">
-          <div className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight">
-            <StoreIcon className="size-5 text-sidebar-primary" />
-            MVP POS
+          <div className="flex items-center gap-2.5 font-heading text-base font-semibold tracking-tight">
+            <img src="/logo-ce-fondo-claro.svg" alt="" aria-hidden className="size-8" />
+            Cē POS
           </div>
 
           <nav aria-label="Principal" className="ml-4 hidden items-center gap-1 sm:flex">

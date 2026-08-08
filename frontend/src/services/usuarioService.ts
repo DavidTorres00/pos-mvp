@@ -26,6 +26,13 @@ export interface UsuarioCreatePayload {
   sucursal_id: number
 }
 
+export interface UsuarioUpdatePayload {
+  nombre?: string
+  email?: string
+  sucursal_id?: number
+  activo?: boolean
+}
+
 export async function listUsuarios(params: ListUsuariosParams = {}): Promise<PaginatedResponse<Usuario>> {
   const { data } = await api.get<PaginatedResponse<Usuario>>('/usuarios', { params })
   return data
@@ -46,8 +53,13 @@ export async function setPermisoDevoluciones(id: number, puede_hacer_devolucione
   return data
 }
 
-export async function updateNombreUsuario(id: number, nombre: string): Promise<Usuario> {
-  const { data } = await api.patch<Usuario>(`/usuarios/${id}/nombre`, { nombre })
+export async function updateUsuario(id: number, payload: UsuarioUpdatePayload): Promise<Usuario> {
+  const { data } = await api.patch<Usuario>(`/usuarios/${id}`, payload)
+  return data
+}
+
+export async function resetearPasswordUsuario(id: number, password: string): Promise<Usuario> {
+  const { data } = await api.post<Usuario>(`/usuarios/${id}/resetear-password`, { password })
   return data
 }
 

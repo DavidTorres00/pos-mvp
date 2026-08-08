@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 720
     admin_email: str = "admin@possystem.com"
     admin_password: str
+    # dueño de Soluciones Web — sin configurar, scripts/seed_superuser.py no crea nada (no todo
+    # deploy necesita este acceso, ver docs/BACKEND.md)
+    superuser_email: str | None = None
+    superuser_password: str | None = None
     cookie_secure: bool = True
     cors_origins: str = "http://localhost:5173"
 

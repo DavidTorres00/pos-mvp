@@ -128,6 +128,58 @@ export async function getMasVendidos(params: MasVendidosParams = {}): Promise<Pr
   return data
 }
 
+export interface ProductoReporte {
+  producto_id: number
+  sku: string
+  producto_nombre: string
+  categoria_nombre: string | null
+  cantidad: number
+  total_vendido: string
+  utilidad_total: string
+  margen_pct: string | null
+}
+
+// sin `limite` (a diferencia de getMasVendidos): esta es la base del export "Productos
+// vendidos" completo, ver docs/REPORTES_EXPORTACION.md — nunca corta la lista
+export async function getReporteProductos(params: ResumenVentasParams = {}): Promise<ProductoReporte[]> {
+  const { desde, hasta, formaPago, sucursalId, usuarioId } = params
+  const { data } = await api.get<ProductoReporte[]>('/ventas/reporte-productos', {
+    params: {
+      desde: desde || undefined,
+      hasta: hasta || undefined,
+      forma_pago: formaPago || undefined,
+      sucursal_id: sucursalId ?? undefined,
+      usuario_id: usuarioId ?? undefined,
+    },
+  })
+  return data
+}
+
+export interface MovimientoReversa {
+  tipo: 'devolucion' | 'cancelacion'
+  id: number
+  venta_id: number
+  created_at: string
+  sucursal_nombre: string | null
+  actor_nombre: string
+  motivo: string
+  monto_total: string
+}
+
+export async function getDevolucionesCancelaciones(params: ResumenVentasParams = {}): Promise<MovimientoReversa[]> {
+  const { desde, hasta, formaPago, sucursalId, usuarioId } = params
+  const { data } = await api.get<MovimientoReversa[]>('/ventas/devoluciones-cancelaciones', {
+    params: {
+      desde: desde || undefined,
+      hasta: hasta || undefined,
+      forma_pago: formaPago || undefined,
+      sucursal_id: sucursalId ?? undefined,
+      usuario_id: usuarioId ?? undefined,
+    },
+  })
+  return data
+}
+
 export interface VentaPorDia {
   fecha: string
   total_monto: string

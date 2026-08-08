@@ -13,6 +13,7 @@ from app.modules.proveedores.router import router as proveedores_router
 from app.modules.reportes.router import router as reportes_router
 from app.modules.subcategorias.router import router as subcategorias_router
 from app.modules.sucursales.router import router as sucursales_router
+from app.modules.superadmin.router import router as superadmin_router
 from app.modules.usuarios.router import router as usuarios_router
 from app.modules.usuarios.router import usuarios_router as usuarios_gestion_router
 from app.modules.ventas.router import router as ventas_router
@@ -44,3 +45,4 @@ api_router.include_router(equipos_router)
 api_router.include_router(compras_router)
 api_router.include_router(ventas_router)
 api_router.include_router(reportes_router)
+api_router.include_router(superadmin_router)

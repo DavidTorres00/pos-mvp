@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import Select
 
 from app.models.caja import CajaSesion
+from app.models.categoria import Categoria
 from app.models.detalle_venta import DetalleVenta
 from app.models.equipo import Equipo
 from app.models.producto import Producto
@@ -151,6 +152,65 @@ def ranking_productos(
     )
     stmt = _filtrar(stmt, desde, hasta, forma_pago, sucursal_id, usuario_id, excluir_canceladas=True)
     return [(pid, nombre, int(cantidad), Decimal(monto)) for pid, nombre, cantidad, monto in db.execute(stmt).all()]
+
+
+def reporte_productos(
+    db: Session,
+    desde: datetime | None,
+    hasta: datetime | None,
+    forma_pago: FormaPago | None,
+    sucursal_id: int | None,
+    usuario_id: int | None,
+) -> list[tuple[int, str, str, str | None, int, Decimal, Decimal, Decimal | None]]:
+    """Base del reporte exportable "Productos vendidos" (`docs/REPORTES_EXPORTACION.md`) —
+    igual que `ranking_productos` pero sin recorte y con SKU/categoría/utilidad/margen por
+    producto, para trabajarlo fuera del sistema (no para la card "Top productos" en pantalla,
+    que sigue usando `ranking_productos`). Dos queries agrupadas por producto en vez de una sola
+    con `case()`, mismo criterio que `resumen()` arriba: una línea sin `costo_unitario` no debe
+    aportar utilidad 0 (subestimaría el margen), así que la utilidad se agrega aparte, solo
+    sobre líneas con costo conocido."""
+    stmt_cantidades = (
+        select(
+            Producto.id,
+            Producto.sku,
+            Producto.nombre,
+            Categoria.nombre,
+            func.sum(DetalleVenta.cantidad),
+            func.sum(DetalleVenta.subtotal),
+        )
+        .select_from(DetalleVenta)
+        .join(Venta, Venta.id == DetalleVenta.venta_id)
+        .join(Producto, Producto.id == DetalleVenta.producto_id)
+        .outerjoin(Categoria, Categoria.id == Producto.categoria_id)
+        .group_by(Producto.id, Producto.sku, Producto.nombre, Categoria.nombre)
+        .order_by(func.sum(DetalleVenta.cantidad).desc())
+    )
+    stmt_cantidades = _filtrar(stmt_cantidades, desde, hasta, forma_pago, sucursal_id, usuario_id, excluir_canceladas=True)
+    filas = db.execute(stmt_cantidades).all()
+
+    stmt_utilidad = (
+        select(
+            Producto.id,
+            func.sum((DetalleVenta.precio_unitario - DetalleVenta.costo_unitario) * DetalleVenta.cantidad),
+            func.sum(DetalleVenta.subtotal),
+        )
+        .select_from(DetalleVenta)
+        .join(Venta, Venta.id == DetalleVenta.venta_id)
+        .join(Producto, Producto.id == DetalleVenta.producto_id)
+        .where(DetalleVenta.costo_unitario.is_not(None))
+        .group_by(Producto.id)
+    )
+    stmt_utilidad = _filtrar(stmt_utilidad, desde, hasta, forma_pago, sucursal_id, usuario_id, excluir_canceladas=True)
+    utilidad_por_producto = {pid: (Decimal(utilidad), Decimal(monto)) for pid, utilidad, monto in db.execute(stmt_utilidad).all()}
+
+    resultado = []
+    for pid, sku, nombre, categoria_nombre, cantidad, monto in filas:
+        utilidad, monto_con_costo = utilidad_por_producto.get(pid, (None, None))
+        margen_pct = (utilidad / monto_con_costo * 100) if utilidad is not None and monto_con_costo else None
+        resultado.append(
+            (pid, sku, nombre, categoria_nombre, int(cantidad), Decimal(monto), utilidad or Decimal(0), margen_pct)
+        )
+    return resultado
 
 
 def por_sucursal(
