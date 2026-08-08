@@ -116,7 +116,9 @@ def actualizar_permisos(
     usuario: Usuario = Depends(get_current_user),
 ) -> UsuarioOut:
     try:
-        return usuario_service.actualizar_permisos(db, usuario.id, usuario_id, payload.puede_retirar_excedente)
+        return usuario_service.actualizar_permisos(
+            db, usuario.id, usuario_id, payload.puede_retirar_excedente, payload.puede_hacer_devoluciones
+        )
     except UsuarioNoEncontradoError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 

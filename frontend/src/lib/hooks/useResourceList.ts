@@ -6,15 +6,17 @@ interface ResourceListParams {
   q: string
   page: number
   size: number
+  enabled?: boolean
 }
 
 export function useResourceList<T>(
   queryKey: QueryKey,
   listFn: (params: { q?: string; page?: number; size?: number }) => Promise<PaginatedResponse<T>>,
-  { q, page, size }: ResourceListParams,
+  { q, page, size, enabled = true }: ResourceListParams,
 ) {
   return useQuery({
     queryKey: [...queryKey, q, page, size],
     queryFn: () => listFn({ q: q || undefined, page, size }),
+    enabled,
   })
 }

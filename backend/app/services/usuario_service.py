@@ -50,20 +50,28 @@ def actualizar_nombre(db: Session, actor_id: int, usuario_id: int, nombre: str) 
     return usuario
 
 
-def actualizar_permisos(db: Session, actor_id: int, usuario_id: int, puede_retirar_excedente: bool) -> Usuario:
+def actualizar_permisos(
+    db: Session,
+    actor_id: int,
+    usuario_id: int,
+    puede_retirar_excedente: bool | None,
+    puede_hacer_devoluciones: bool | None,
+) -> Usuario:
     usuario = usuario_repository.get_by_id(db, usuario_id)
     if usuario is None:
         raise UsuarioNoEncontradoError(usuario_id)
-    anterior = usuario.puede_retirar_excedente
-    usuario.puede_retirar_excedente = puede_retirar_excedente
+
+    cambios: dict[str, bool] = {}
+    if puede_retirar_excedente is not None and puede_retirar_excedente != usuario.puede_retirar_excedente:
+        cambios["puede_retirar_excedente_anterior"] = usuario.puede_retirar_excedente
+        cambios["puede_retirar_excedente_nuevo"] = puede_retirar_excedente
+        usuario.puede_retirar_excedente = puede_retirar_excedente
+    if puede_hacer_devoluciones is not None and puede_hacer_devoluciones != usuario.puede_hacer_devoluciones:
+        cambios["puede_hacer_devoluciones_anterior"] = usuario.puede_hacer_devoluciones
+        cambios["puede_hacer_devoluciones_nuevo"] = puede_hacer_devoluciones
+        usuario.puede_hacer_devoluciones = puede_hacer_devoluciones
+
     usuario = usuario_repository.save(db, usuario)
-    if anterior != puede_retirar_excedente:
-        auditoria_service.registrar(
-            db,
-            actor_id,
-            "usuario_permisos_cambiados",
-            "usuario",
-            usuario.id,
-            {"puede_retirar_excedente_anterior": anterior, "puede_retirar_excedente_nuevo": puede_retirar_excedente},
-        )
+    if cambios:
+        auditoria_service.registrar(db, actor_id, "usuario_permisos_cambiados", "usuario", usuario.id, cambios)
     return usuario

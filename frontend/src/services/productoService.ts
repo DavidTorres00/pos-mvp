@@ -11,6 +11,7 @@ export interface Producto {
   nombre: string
   sku: string
   precio_venta: string
+  costo: string | null
   activo: boolean
   categoria_id: number | null
   categoria: Categoria | null
@@ -30,6 +31,7 @@ export interface ProductoPayload {
   nombre: string
   sku: string | null
   precio_venta: number
+  costo: number | null
   categoria_id: number | null
   subcategoria_id: number | null
   proveedor_id: number | null

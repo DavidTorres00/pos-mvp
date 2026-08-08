@@ -1,7 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3Icon,
   BoxesIcon,
   ChevronDownIcon,
   ClipboardListIcon,
@@ -64,14 +63,7 @@ const TOPBAR_GROUPS: TopbarGroup[] = [
     ],
   },
   { type: 'link', to: '/proveedores', label: 'Proveedores', icon: TruckIcon },
-  {
-    type: 'menu',
-    label: 'Reportes',
-    links: [
-      { to: '/reportes', label: 'Reportes', icon: BarChart3Icon },
-      { to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon },
-    ],
-  },
+  { type: 'link', to: '/auditoria', label: 'Auditoría', icon: ClipboardListIcon },
   {
     type: 'menu',
     label: 'Ajustes',

@@ -7,9 +7,8 @@ import type { Alerta, SucursalResumen } from '@/services/reporteService'
 interface SucursalCardProps {
   resumen: SucursalResumen
   // alertas de `GET /reportes/atencion` ya filtradas a `sucursal_id === resumen.sucursal_id` por
-  // el caller — la card no vuelve a comparar cajas_excedidas por su cuenta (ver docs/FRONTEND.md,
-  // antes esta card y AtencionFeed podían contradecirse: la card medía solo cajas_excedidas y el
-  // feed medía las 6 fuentes de alerta reales)
+  // el caller — la card no recalcula su propio criterio de alerta (ej. solo cajas_excedidas):
+  // usa las mismas fuentes reales que AtencionFeed, para no poder divergir de él
   alertas: Alerta[]
 }
 

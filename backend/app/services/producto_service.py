@@ -105,6 +105,7 @@ def crear(
     nombre: str,
     sku: str | None,
     precio_venta: Decimal,
+    costo: Decimal | None = None,
     categoria_id: int | None = None,
     subcategoria_id: int | None = None,
     proveedor_id: int | None = None,
@@ -125,6 +126,7 @@ def crear(
         nombre=nombre,
         sku=sku,
         precio_venta=precio_venta,
+        costo=costo,
         categoria_id=categoria_id,
         subcategoria_id=subcategoria_id,
         proveedor_id=proveedor_id,
@@ -147,6 +149,7 @@ def actualizar(
     nombre: str,
     sku: str,
     precio_venta: Decimal,
+    costo: Decimal | None = None,
     categoria_id: int | None = None,
     subcategoria_id: int | None = None,
     proveedor_id: int | None = None,
@@ -168,6 +171,7 @@ def actualizar(
     producto.nombre = nombre
     producto.sku = sku
     producto.precio_venta = precio_venta
+    producto.costo = costo
     producto.categoria_id = categoria_id
     producto.subcategoria_id = subcategoria_id
     producto.proveedor_id = proveedor_id

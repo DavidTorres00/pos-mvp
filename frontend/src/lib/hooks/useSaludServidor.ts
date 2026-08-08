@@ -21,6 +21,9 @@ export function useSaludServidor(enabled: boolean) {
     refetchInterval: caido ? 5_000 : 20_000,
     retry: false,
     enabled,
+    // no debe disparar el toast genérico de error (ver app/providers.tsx) — es un heartbeat de
+    // fondo, su resultado ya lo consume servidorStore vía el interceptor de services/api.ts
+    meta: { silent: true },
   })
 
   // cualquier cambio de `online` (se desconecta o vuelve el cable/Wi-Fi) fuerza un chequeo

@@ -17,6 +17,11 @@ class Producto(Base):
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     sku: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     precio_venta: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # costo actual del producto, para calcular utilidad/margen — nulo hasta que se recibe la
+    # primera compra (compra_service.recibir lo sincroniza solo) o el admin lo carga a mano.
+    # Nunca se infiere en 0: una línea de venta sin costo conocido queda fuera del cálculo de
+    # utilidad en vez de inflarla artificialmente (ver docs/BACKEND.md).
+    costo: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

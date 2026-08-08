@@ -11,25 +11,6 @@ from app.models.stock_sucursal import StockSucursal
 from app.models.venta import Venta
 
 
-def totales_ventas_del_dia(db: Session, fecha: date) -> tuple[Decimal, int]:
-    stmt = select(func.coalesce(func.sum(Venta.total), 0), func.count(Venta.id)).where(
-        func.date(Venta.created_at) == fecha
-    )
-    total, cantidad = db.execute(stmt).one()
-    return Decimal(total), cantidad
-
-
-def ventas_por_hora(db: Session, fecha: date) -> list[tuple[int, Decimal, int]]:
-    hora = func.extract("hour", Venta.created_at)
-    stmt = (
-        select(hora, func.coalesce(func.sum(Venta.total), 0), func.count(Venta.id))
-        .where(func.date(Venta.created_at) == fecha)
-        .group_by(hora)
-        .order_by(hora)
-    )
-    return [(int(h), Decimal(total), cantidad) for h, total, cantidad in db.execute(stmt).all()]
-
-
 def ventas_por_sucursal_del_dia(db: Session, fecha: date) -> dict[int, tuple[Decimal, int]]:
     """Todas las ventas de hoy por sucursal, sin importar si la caja que las originó sigue
     abierta o ya cerró — a diferencia de `caja_service.resumenes` (que solo ve cajas

@@ -11,11 +11,12 @@ interface UseMovimientosFiltros {
   hasta?: string
 }
 
-export function useMovimientos(filtros: UseMovimientosFiltros, page = 1, size = 20) {
+export function useMovimientos(filtros: UseMovimientosFiltros, page = 1, size = 20, enabled = true) {
   const { q, tipo, desde, hasta } = filtros
   const sucursalId = useSucursalActivaStore((state) => state.sucursalId)
   return useQuery({
     queryKey: ['movimientos', q, tipo, desde, hasta, sucursalId, page, size],
     queryFn: () => listMovimientos({ q, tipo, desde, hasta, sucursalId, page, size }),
+    enabled,
   })
 }

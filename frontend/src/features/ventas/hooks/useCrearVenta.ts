@@ -7,12 +7,16 @@ export function useCrearVenta() {
     (payload: VentaPayload) => createVenta(payload),
     [
       ['ventas'],
+      ['ventas-resumen'],
+      ['ventas-mas-vendidos'],
+      ['ventas-por-dia'],
+      ['ventas-por-sucursal'],
       ['productos'],
       ['movimientos'],
       ['caja-actual'],
       ['caja-resumen'],
-      ['reporte-ventas-dia'],
       ['cajas-abiertas'],
+      ['resumen-sucursales'],
     ],
   )
 }

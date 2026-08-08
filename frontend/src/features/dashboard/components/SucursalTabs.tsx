@@ -14,7 +14,9 @@ function tabClass(active: boolean) {
 }
 
 export function SucursalTabs({ sucursales, seleccionada, onSeleccionar }: SucursalTabsProps) {
-  if (sucursales.length === 0) return null
+  // con 0 o 1 sucursal no hay nada real que elegir — "Todas" y la única sucursal serían la
+  // misma vista dos veces (admin de una sola sucursal, ver docs/FRONTEND.md)
+  if (sucursales.length <= 1) return null
 
   return (
     <div className="flex w-fit flex-wrap items-center gap-1 rounded-lg border bg-muted/40 p-1">

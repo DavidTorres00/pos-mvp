@@ -7,12 +7,23 @@ import type { Usuario } from '@/services/usuarioService'
 
 interface UsuariosTableProps {
   usuarios: Usuario[]
-  onTogglePermiso: (usuario: Usuario) => void
+  onToggleExcedente: (usuario: Usuario) => void
+  onToggleDevoluciones: (usuario: Usuario) => void
   onEdit: (usuario: Usuario) => void
-  pending: boolean
+  pendingExcedente: boolean
+  pendingDevoluciones: boolean
+  showSucursal?: boolean
 }
 
-export function UsuariosTable({ usuarios, onTogglePermiso, onEdit, pending }: UsuariosTableProps) {
+export function UsuariosTable({
+  usuarios,
+  onToggleExcedente,
+  onToggleDevoluciones,
+  onEdit,
+  pendingExcedente,
+  pendingDevoluciones,
+  showSucursal = true,
+}: UsuariosTableProps) {
   if (usuarios.length === 0) {
     return <EmptyState message="No hay usuarios." bordered={false} />
   }
@@ -24,9 +35,10 @@ export function UsuariosTable({ usuarios, onTogglePermiso, onEdit, pending }: Us
           <TableHead>Nombre</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Rol</TableHead>
-          <TableHead>Sucursal</TableHead>
+          {showSucursal && <TableHead>Sucursal</TableHead>}
           <TableHead>Estado</TableHead>
-          <TableHead>Puede retirar excedente de caja</TableHead>
+          <TableHead>Retirar excedente de caja</TableHead>
+          <TableHead>Procesar devoluciones</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -40,7 +52,7 @@ export function UsuariosTable({ usuarios, onTogglePermiso, onEdit, pending }: Us
                 {usuario.role === 'admin' ? 'Admin' : 'Cajero'}
               </Badge>
             </TableCell>
-            <TableCell className="text-muted-foreground">{usuario.sucursal_nombre ?? '—'}</TableCell>
+            {showSucursal && <TableCell className="text-muted-foreground">{usuario.sucursal_nombre ?? '—'}</TableCell>}
             <TableCell className={usuario.activo ? 'text-foreground' : 'text-muted-foreground'}>
               {usuario.activo ? 'Activo' : 'Inactivo'}
             </TableCell>
@@ -50,12 +62,28 @@ export function UsuariosTable({ usuarios, onTogglePermiso, onEdit, pending }: Us
               ) : (
                 <Switch
                   checked={usuario.puede_retirar_excedente}
-                  disabled={pending}
-                  onCheckedChange={() => onTogglePermiso(usuario)}
+                  disabled={pendingExcedente}
+                  onCheckedChange={() => onToggleExcedente(usuario)}
                   aria-label={
                     usuario.puede_retirar_excedente
                       ? `Quitar permiso de retiro a ${usuario.nombre}`
                       : `Dar permiso de retiro a ${usuario.nombre}`
+                  }
+                />
+              )}
+            </TableCell>
+            <TableCell>
+              {usuario.role === 'admin' ? (
+                <span className="text-sm text-muted-foreground">Siempre puede</span>
+              ) : (
+                <Switch
+                  checked={usuario.puede_hacer_devoluciones}
+                  disabled={pendingDevoluciones}
+                  onCheckedChange={() => onToggleDevoluciones(usuario)}
+                  aria-label={
+                    usuario.puede_hacer_devoluciones
+                      ? `Quitar permiso de devoluciones a ${usuario.nombre}`
+                      : `Dar permiso de devoluciones a ${usuario.nombre}`
                   }
                 />
               )}

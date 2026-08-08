@@ -23,3 +23,9 @@ export function sanitizarNumeroNoNegativo(valor: string): string {
 export function numeroDesdeTexto(valor: string): number {
   return valor === '' ? NaN : Number(valor)
 }
+
+// mismo saneo, para campos genuinamente opcionales (ej. `Producto.costo`) — vacío es un valor
+// válido ("no cargado todavía"), no un error de validación como en `numeroDesdeTexto`
+export function numeroOpcionalDesdeTexto(valor: string): number | null {
+  return valor === '' ? null : Number(valor)
+}

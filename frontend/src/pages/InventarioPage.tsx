@@ -35,6 +35,7 @@ export function InventarioPage() {
     { q: debouncedSearch, tipo: tipo || undefined, desde, hasta },
     page,
     size,
+    isAdmin,
   )
   const movimientos = data?.items ?? []
   const total = data?.total ?? 0

@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from app.repositories import (
     usuario_repository,
 )
 from app.schemas.caja import CajaResumenOut
-from app.schemas.reporte import AlertaOut, SucursalResumenOut, VentasDiaOut, VentasPorHoraItem
+from app.schemas.reporte import AlertaOut, SucursalResumenOut
 from app.services import caja_service
 
 # únicos tipos de alerta basados en un hecho histórico inmutable — las demás (caja_excedida,
@@ -26,25 +26,6 @@ TIPOS_ACUSABLES = {"faltante_caja"}
 
 HORAS_CAJA_SIN_CIERRE = 24
 HORAS_FALTANTE_RECIENTE = 48
-
-
-def ventas_del_dia(db: Session, fecha: date | None = None) -> VentasDiaOut:
-    fecha = fecha or hoy_negocio()
-    total, cantidad = reporte_repository.totales_ventas_del_dia(db, fecha)
-    return VentasDiaOut(fecha=fecha, total_ventas=total, cantidad_ventas=cantidad)
-
-
-def ventas_por_hora(db: Session, fecha: date | None = None) -> list[VentasPorHoraItem]:
-    fecha = fecha or hoy_negocio()
-    por_hora = {hora: (total, cantidad) for hora, total, cantidad in reporte_repository.ventas_por_hora(db, fecha)}
-    return [
-        VentasPorHoraItem(
-            hora=hora,
-            total_ventas=por_hora.get(hora, (Decimal("0"), 0))[0],
-            cantidad_ventas=por_hora.get(hora, (Decimal("0"), 0))[1],
-        )
-        for hora in range(24)
-    ]
 
 
 def cajas_abiertas(db: Session) -> list[CajaResumenOut]:

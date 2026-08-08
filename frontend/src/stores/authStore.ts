@@ -8,6 +8,7 @@ export interface Usuario {
   activo: boolean
   role: 'admin' | 'cajero'
   puede_retirar_excedente: boolean
+  puede_hacer_devoluciones: boolean
 }
 
 interface AuthState {

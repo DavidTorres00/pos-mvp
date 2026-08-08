@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type MutableRefObject } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import {
   AlertTriangleIcon,
@@ -28,15 +28,18 @@ import { useLogout } from '@/features/auth/hooks/useLogout'
 import { construirComprobanteCierreHtml } from '@/features/caja/lib/comprobanteCierreHtml'
 import { construirComprobanteRetiroHtml } from '@/features/caja/lib/comprobanteRetiroHtml'
 import { construirComprobanteVentaHtml } from '@/features/ventas/lib/comprobanteVentaHtml'
+import { DevolucionDialog } from '@/features/ventas/components/DevolucionDialog'
 import { useCrearVenta } from '@/features/ventas/hooks/useCrearVenta'
+import { useVenta } from '@/features/ventas/hooks/useVenta'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { formatCurrency, formatTime } from '@/lib/format'
 import { sumLineTotals } from '@/lib/lineItems'
+import { sanitizarNumeroNoNegativo } from '@/lib/numericInput'
 import { imprimirTicketTermico } from '@/lib/qzPrint'
 import { cn } from '@/lib/utils'
 import { listProductos, type ProductoConStock } from '@/services/productoService'
 import { getUltimoRetiroExcedente, type CajaResumen, type VoucherRetiro } from '@/services/cajaService'
-import type { FormaPago } from '@/services/ventaService'
+import type { FormaPago, Venta } from '@/services/ventaService'
 import { useAuthStore } from '@/stores/authStore'
 
 interface LineaVenta {
@@ -81,6 +84,7 @@ export function VentaKiosco() {
   }>()
   const usuario = useAuthStore((state) => state.usuario)
   const puedeRetirarExcedente = usuario?.puede_retirar_excedente === true
+  const puedeHacerDevoluciones = usuario?.puede_hacer_devoluciones === true
 
   const [lineas, setLineas] = useState<LineaVenta[]>([])
   const [sku, setSku] = useState('')
@@ -93,6 +97,10 @@ export function VentaKiosco() {
   const [cierreResultado, setCierreResultado] = useState<CajaResumen | null>(null)
   const [excedenteOpen, setExcedenteOpen] = useState(false)
   const [aviso, setAviso] = useState<Aviso | null>(null)
+  const [buscarDevolucionOpen, setBuscarDevolucionOpen] = useState(false)
+  const [folioDevolucion, setFolioDevolucion] = useState('')
+  const [folioDevolucionId, setFolioDevolucionId] = useState<number | undefined>(undefined)
+  const [ventaParaDevolver, setVentaParaDevolver] = useState<Venta | null>(null)
   const skuInputRef = useRef<HTMLInputElement>(null)
   // último retiro ya impreso, para no imprimirlo dos veces cuando el propio cajero lo retira
   // (ya se imprime desde la respuesta de la mutación) y casi al instante llega también el eco
@@ -107,6 +115,11 @@ export function VentaKiosco() {
   const cerrar = useCerrarCaja()
   const retirarExcedente = useRetirarExcedenteCaja()
   const logout = useLogout()
+  const {
+    data: ventaBuscada,
+    isFetching: buscandoDevolucion,
+    isError: errorBuscarDevolucion,
+  } = useVenta(folioDevolucionId)
 
   const crear = useCrearVenta()
   const total = sumLineTotals(lineas, lineaTotal)
@@ -165,6 +178,24 @@ export function VentaKiosco() {
   useEffect(() => {
     terminandoTurnoRef.current = cierreResultado !== null
   }, [cierreResultado, terminandoTurnoRef])
+
+  // en cuanto la búsqueda por folio encuentra la venta, cede el control al diálogo de
+  // devolución y cierra/limpia el diálogo de búsqueda
+  useEffect(() => {
+    if (ventaBuscada) {
+      setVentaParaDevolver(ventaBuscada)
+      setBuscarDevolucionOpen(false)
+      setFolioDevolucionId(undefined)
+      setFolioDevolucion('')
+    }
+  }, [ventaBuscada])
+
+  function handleBuscarDevolucion(e: FormEvent) {
+    e.preventDefault()
+    const id = Number(folioDevolucion.trim())
+    if (!Number.isFinite(id) || id <= 0) return
+    setFolioDevolucionId(id)
+  }
 
   async function buscarYAgregar() {
     const codigo = sku.trim()
@@ -358,6 +389,11 @@ export function VentaKiosco() {
               <StatTile label="Ventas en efectivo" value={formatCurrency(resumen.total_ventas_efectivo)} />
               <StatTile label="Esperado en caja" value={formatCurrency(resumen.monto_esperado)} emphasis />
             </>
+          )}
+          {puedeHacerDevoluciones && (
+            <Button size="sm" variant="outline" onClick={() => setBuscarDevolucionOpen(true)}>
+              Devolución
+            </Button>
           )}
           <Button size="sm" onClick={() => setCierreOpen(true)}>
             Terminar turno
@@ -668,6 +704,42 @@ export function VentaKiosco() {
         </SheetContent>
       </Sheet>
 
+      <Dialog
+        open={buscarDevolucionOpen}
+        onOpenChange={(open) => {
+          setBuscarDevolucionOpen(open)
+          if (!open) {
+            setFolioDevolucion('')
+            setFolioDevolucionId(undefined)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Buscar venta a devolver</DialogTitle>
+          </DialogHeader>
+          <form className="flex flex-col gap-3" onSubmit={handleBuscarDevolucion}>
+            <Label htmlFor="folio-devolucion">Folio de la venta (número de ticket)</Label>
+            <Input
+              id="folio-devolucion"
+              autoFocus
+              value={folioDevolucion}
+              onChange={(e) => setFolioDevolucion(sanitizarNumeroNoNegativo(e.target.value))}
+              placeholder="Ej. 3185"
+            />
+            {folioDevolucionId !== undefined && errorBuscarDevolucion && (
+              <p role="alert" className="text-sm text-destructive">
+                No se encontró una venta con ese folio.
+              </p>
+            )}
+            <Button type="submit" disabled={buscandoDevolucion || folioDevolucion.trim() === ''}>
+              {buscandoDevolucion ? 'Buscando...' : 'Buscar'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <DevolucionDialog venta={ventaParaDevolver} onClose={() => setVentaParaDevolver(null)} />
     </div>
   )
 }

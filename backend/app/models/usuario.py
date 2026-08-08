@@ -25,6 +25,9 @@ class Usuario(Base):
     # habilita a un cajero a ejecutar el retiro de excedente de caja (admin siempre puede); el
     # admin lo otorga por cajero según convenga operativamente (§4.3)
     puede_retirar_excedente: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # habilita a un cajero a procesar devoluciones (admin siempre puede) — mismo patrón que
+    # puede_retirar_excedente, ver docs/BACKEND.md
+    puede_hacer_devoluciones: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # nulo para admin (ve todas las sucursales remotamente); obligatorio para cajero, forzado por

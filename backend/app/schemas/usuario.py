@@ -19,12 +19,15 @@ class UsuarioOut(BaseModel):
     role: RolUsuario
     activo: bool
     puede_retirar_excedente: bool
+    puede_hacer_devoluciones: bool
     sucursal_id: int | None
     sucursal_nombre: str | None
 
 
 class UsuarioPermisosUpdate(BaseModel):
-    puede_retirar_excedente: bool
+    # ambos opcionales: la UI cambia un permiso a la vez (un switch por fila), no manda el otro
+    puede_retirar_excedente: bool | None = None
+    puede_hacer_devoluciones: bool | None = None
 
 
 class UsuarioNombreUpdate(BaseModel):

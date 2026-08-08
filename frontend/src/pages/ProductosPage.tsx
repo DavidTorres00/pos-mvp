@@ -66,7 +66,7 @@ export function ProductosPage() {
     data: categoriasData,
     isLoading: isLoadingCategorias,
     isError: isErrorCategorias,
-  } = useCategorias(debouncedCategoriaSearch, sucursalActivaId, 1, 100)
+  } = useCategorias(debouncedCategoriaSearch, sucursalActivaId, 1, 100, isAdmin)
   const categorias = categoriasData?.items ?? []
   const seleccionadaId = categoriaElegidaId ?? categorias[0]?.id ?? null
   const seleccionada = categorias.find((c) => c.id === seleccionadaId) ?? null
@@ -84,7 +84,7 @@ export function ProductosPage() {
     data: productosData,
     isLoading: isLoadingProductos,
     isError: isErrorProductos,
-  } = useProductos({ q: debouncedProductoSearch, categoriaId: seleccionadaId }, page, size)
+  } = useProductos({ q: debouncedProductoSearch, categoriaId: seleccionadaId }, page, size, isAdmin)
   const productos = productosData?.items ?? []
   const totalProductos = productosData?.total ?? 0
   const pageCountProductos = Math.max(1, Math.ceil(totalProductos / size))
@@ -306,6 +306,7 @@ export function ProductosPage() {
                 nombre: productoDialog.editing.nombre,
                 sku: productoDialog.editing.sku,
                 precio_venta: Number(productoDialog.editing.precio_venta),
+                costo: productoDialog.editing.costo === null ? null : Number(productoDialog.editing.costo),
                 categoria_id: productoDialog.editing.categoria_id,
                 subcategoria_id: productoDialog.editing.subcategoria_id,
                 proveedor_id: productoDialog.editing.proveedor_id,

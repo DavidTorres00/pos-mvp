@@ -166,6 +166,13 @@ def recibir(db: Session, usuario_id: int, compra_id: int, items: list[CompraReci
                 cantidad_recibida,
                 motivo=f"Compra #{compra.id}",
             )
+            # el costo del producto para efectos de utilidad/margen (ver Producto.costo) refleja
+            # lo último que de verdad se pagó — se sincroniza solo al recibir, sin que el admin
+            # tenga que capturarlo aparte; sigue siendo editable a mano para el costo inicial
+            # antes de la primera compra registrada
+            producto = producto_repository.get_by_id(db, detalle.producto_id)
+            producto.costo = detalle.costo_unitario
+            producto_repository.save(db, producto)
 
     compra.estado = EstadoCompra.RECIBIDA
     compra.recibido_por_id = usuario_id

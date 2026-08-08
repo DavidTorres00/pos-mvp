@@ -1,19 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangleIcon, ListChecksIcon, PiggyBankIcon, WalletIcon } from 'lucide-react'
+import { AlertTriangleIcon, PiggyBankIcon, WalletIcon } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState, LoadingState } from '@/components/DataStates'
-import { AtencionFeed } from '@/features/dashboard/components/AtencionFeed'
 import { CajasAbiertasLista } from '@/features/dashboard/components/CajasAbiertasLista'
 import { SucursalCard } from '@/features/dashboard/components/SucursalCard'
 import { SucursalTabs } from '@/features/dashboard/components/SucursalTabs'
-import { VentasPorHoraChart } from '@/features/dashboard/components/VentasPorHoraChart'
-import { useAcusarAlerta } from '@/features/dashboard/hooks/useAcusarAlerta'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { getAtencion, getCajasAbiertas, getResumenSucursales, getVentasPorHora } from '@/services/reporteService'
-import type { Alerta } from '@/services/reporteService'
+import { getAtencion, getCajasAbiertas, getResumenSucursales } from '@/services/reporteService'
 import { useAuthStore } from '@/stores/authStore'
 
 interface StatTileProps {
@@ -63,11 +59,6 @@ export function DashboardPage() {
     isLoading: isLoadingAtencion,
     isError: isErrorAtencion,
   } = useQuery({ queryKey: ['reportes-atencion'], queryFn: getAtencion })
-  const {
-    data: ventasPorHora,
-    isLoading: isLoadingVentasPorHora,
-    isError: isErrorVentasPorHora,
-  } = useQuery({ queryKey: ['ventas-por-hora'], queryFn: () => getVentasPorHora() })
 
   const sucursales = resumenSucursales ?? []
 
@@ -84,12 +75,6 @@ export function DashboardPage() {
     nombreSeleccionada === null
       ? (cajasAbiertas ?? [])
       : (cajasAbiertas ?? []).filter((c) => c.caja.sucursal_nombre === nombreSeleccionada)
-  // las alertas sin sucursal (p. ej. el agregado de stock bajo, que puede abarcar varias) se
-  // muestran siempre, sin importar el filtro — no tiene sentido esconderlas al elegir una sucursal
-  const alertasFiltradas =
-    nombreSeleccionada === null
-      ? (atencion ?? [])
-      : (atencion ?? []).filter((a) => a.sucursal_nombre === null || a.sucursal_nombre === nombreSeleccionada)
 
   const ventasHoyTotal = resumenesFiltrados.reduce((sum, r) => sum + Number(r.ventas_hoy), 0)
   const cantidadVentasHoy = resumenesFiltrados.reduce((sum, r) => sum + r.cantidad_ventas_hoy, 0)
@@ -98,12 +83,6 @@ export function DashboardPage() {
 
   const statsLoading = isLoadingSucursales || isLoadingCajas || isLoadingAtencion
   const statsError = isErrorSucursales || isErrorCajas || isErrorAtencion
-
-  const acusarAlerta = useAcusarAlerta()
-  function handleAcusar(alerta: Alerta) {
-    if (alerta.auditoria_id === null || acusarAlerta.isPending) return
-    acusarAlerta.mutate({ tipo: alerta.tipo, referenciaId: alerta.auditoria_id })
-  }
 
   return (
     <div className="flex w-full flex-col gap-6 p-6">
@@ -124,7 +103,7 @@ export function DashboardPage() {
           <ErrorState bordered={false} />
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <StatTile
             label="Ventas de hoy"
             value={formatCurrency(ventasHoyTotal)}
@@ -144,16 +123,12 @@ export function DashboardPage() {
             valueClassName={cajasExcedidasTotal > 0 ? 'text-destructive' : 'text-primary'}
             icon={AlertTriangleIcon}
           />
-          <StatTile
-            label="Pendientes de decidir"
-            value={String(alertasFiltradas.length)}
-            hint={alertasFiltradas.length > 0 ? 'Cortes y alertas de stock esperándote' : 'Nada esperando tu decisión'}
-            icon={ListChecksIcon}
-          />
         </div>
       )}
 
-      {resumenesFiltrados.length > 0 && (
+      {/* con 1 sola sucursal esta card repetiría exactamente lo que ya dicen los stat tiles de
+          arriba (mismos números, misma sucursal) — ver docs/FRONTEND.md */}
+      {sucursales.length > 1 && resumenesFiltrados.length > 0 && (
         <div>
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Sucursales</h2>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -168,53 +143,17 @@ export function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Requiere tu atención</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingAtencion ? (
-              <LoadingState />
-            ) : isErrorAtencion ? (
-              <ErrorState bordered={false} />
-            ) : (
-              <AtencionFeed
-                alertas={alertasFiltradas}
-                onAcusar={handleAcusar}
-                acusandoAuditoriaId={acusarAlerta.isPending ? (acusarAlerta.variables?.referenciaId ?? null) : null}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cajas abiertas ahora</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoadingCajas ? (
-              <LoadingState />
-            ) : isErrorCajas ? (
-              <ErrorState bordered={false} />
-            ) : (
-              <CajasAbiertasLista resumenes={cajasFiltradas} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader>
-          <CardTitle>Ventas por hora</CardTitle>
+          <CardTitle>Cajas abiertas ahora</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoadingVentasPorHora ? (
+          {isLoadingCajas ? (
             <LoadingState />
-          ) : isErrorVentasPorHora || !ventasPorHora ? (
+          ) : isErrorCajas ? (
             <ErrorState bordered={false} />
           ) : (
-            <VentasPorHoraChart datos={ventasPorHora} />
+            <CajasAbiertasLista resumenes={cajasFiltradas} />
           )}
         </CardContent>
       </Card>

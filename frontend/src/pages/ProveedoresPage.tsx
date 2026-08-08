@@ -53,7 +53,7 @@ export function ProveedoresPage() {
     data: proveedoresData,
     isLoading: isLoadingProveedores,
     isError: isErrorProveedores,
-  } = useProveedores(debouncedProveedorSearch, 1, 100)
+  } = useProveedores(debouncedProveedorSearch, 1, 100, isAdmin)
   const proveedores = proveedoresData?.items ?? []
   const seleccionadaId = proveedorElegidoId ?? proveedores[0]?.id ?? null
   const seleccionada = proveedores.find((p) => p.id === seleccionadaId) ?? null
@@ -73,7 +73,7 @@ export function ProveedoresPage() {
     data: productosData,
     isLoading: isLoadingProductos,
     isError: isErrorProductos,
-  } = useProductos({ q: debouncedProductoSearch, proveedorId: seleccionadaId }, prodPage, prodSize)
+  } = useProductos({ q: debouncedProductoSearch, proveedorId: seleccionadaId }, prodPage, prodSize, isAdmin)
   const productos = productosData?.items ?? []
   const totalProductos = productosData?.total ?? 0
   const pageCountProductos = Math.max(1, Math.ceil(totalProductos / prodSize))
@@ -103,7 +103,7 @@ export function ProveedoresPage() {
     data: pedidosData,
     isLoading: isLoadingPedidos,
     isError: isErrorPedidos,
-  } = useCompras(seleccionadaId, pedidoPage, pedidoSize, seleccionadaId !== null)
+  } = useCompras(seleccionadaId, pedidoPage, pedidoSize, isAdmin && seleccionadaId !== null)
   const pedidos = pedidosData?.items ?? []
   const totalPedidos = pedidosData?.total ?? 0
   const pageCountPedidos = Math.max(1, Math.ceil(totalPedidos / pedidoSize))
@@ -398,6 +398,7 @@ export function ProveedoresPage() {
                 nombre: productoDialog.editing.nombre,
                 sku: productoDialog.editing.sku,
                 precio_venta: Number(productoDialog.editing.precio_venta),
+                costo: productoDialog.editing.costo === null ? null : Number(productoDialog.editing.costo),
                 categoria_id: productoDialog.editing.categoria_id,
                 subcategoria_id: productoDialog.editing.subcategoria_id,
                 proveedor_id: productoDialog.editing.proveedor_id,

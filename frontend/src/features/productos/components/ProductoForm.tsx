@@ -9,7 +9,7 @@ import { useCategorias } from '@/features/categorias/hooks/useCategorias'
 import { productoSchema, type ProductoFormValues } from '@/features/productos/schemas/productoSchema'
 import { useProveedores } from '@/features/proveedores/hooks/useProveedores'
 import { useSubcategorias } from '@/features/subcategorias/hooks/useSubcategorias'
-import { numeroDesdeTexto } from '@/lib/numericInput'
+import { numeroDesdeTexto, numeroOpcionalDesdeTexto } from '@/lib/numericInput'
 
 const SIN_CATEGORIA = 'sin-categoria'
 const SIN_SUBCATEGORIA = 'sin-subcategoria'
@@ -50,6 +50,7 @@ export function ProductoForm({
         categoria_id: defaultCategoriaId,
         subcategoria_id: null,
         sku: null,
+        costo: null,
         proveedor_id: defaultProveedorId,
       },
   })
@@ -115,6 +116,13 @@ export function ProductoForm({
         type="number"
         register={register('precio_venta', { setValueAs: numeroDesdeTexto })}
         error={errors.precio_venta}
+      />
+      <FormField
+        label="Costo"
+        type="number"
+        placeholder="Se actualiza solo al recibir un pedido"
+        register={register('costo', { setValueAs: numeroOpcionalDesdeTexto })}
+        error={errors.costo}
       />
       <SelectField
         control={control}

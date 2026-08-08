@@ -53,7 +53,7 @@ export function MasterListAside<T>({
   renderItemActions,
 }: MasterListAsideProps<T>) {
   return (
-    <aside className="flex w-full shrink-0 flex-col gap-3 lg:w-72">
+    <aside className="flex w-full shrink-0 flex-col gap-3 lg:w-72 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6.5rem)]">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {headerAction}
@@ -73,51 +73,53 @@ export function MasterListAside<T>({
         )}
       </div>
 
-      {isLoading ? (
-        <LoadingState />
-      ) : isError ? (
-        <ErrorState />
-      ) : items.length === 0 ? (
-        <EmptyState message={emptyMessage} bordered={false} />
-      ) : (
-        <nav className="flex flex-col gap-1.5">
-          {items.map((item) => {
-            const id = getId(item)
-            return (
-              // `div` con role="button", no un `<button>`: el menú de `renderItemActions` es en
-              // sí un botón (con su propio DropdownMenuTrigger), y un botón dentro de otro botón
-              // es HTML inválido además de romper el foco/click del menú.
-              <div
-                key={id}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelect(id)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onSelect(id)
-                  }
-                }}
-                className={cn(
-                  'flex cursor-pointer items-start justify-between gap-2 rounded-lg border p-3 text-left text-sm transition-colors',
-                  id === selectedId
-                    ? 'border-primary bg-primary/5'
-                    : isItemAlert?.(item)
-                      ? 'border-destructive/40 bg-destructive/5'
-                      : 'hover:bg-muted',
-                )}
-              >
-                <div className="flex flex-col gap-0.5">{renderItem(item)}</div>
-                {renderItemActions && (
-                  <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                    {renderItemActions(item)}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </nav>
-      )}
+      <div className="min-h-0 lg:flex-1 lg:overflow-y-auto">
+        {isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState />
+        ) : items.length === 0 ? (
+          <EmptyState message={emptyMessage} bordered={false} />
+        ) : (
+          <nav className="flex flex-col gap-1.5">
+            {items.map((item) => {
+              const id = getId(item)
+              return (
+                // `div` con role="button", no un `<button>`: el menú de `renderItemActions` es en
+                // sí un botón (con su propio DropdownMenuTrigger), y un botón dentro de otro botón
+                // es HTML inválido además de romper el foco/click del menú.
+                <div
+                  key={id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSelect(id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelect(id)
+                    }
+                  }}
+                  className={cn(
+                    'flex cursor-pointer items-start justify-between gap-2 rounded-lg border p-3 text-left text-sm transition-colors',
+                    id === selectedId
+                      ? 'border-primary bg-primary/5'
+                      : isItemAlert?.(item)
+                        ? 'border-destructive/40 bg-destructive/5'
+                        : 'hover:bg-muted',
+                  )}
+                >
+                  <div className="flex flex-col gap-0.5">{renderItem(item)}</div>
+                  {renderItemActions && (
+                    <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      {renderItemActions(item)}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </nav>
+        )}
+      </div>
     </aside>
   )
 }

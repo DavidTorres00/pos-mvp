@@ -9,6 +9,7 @@ export interface Usuario {
   role: 'admin' | 'cajero'
   activo: boolean
   puede_retirar_excedente: boolean
+  puede_hacer_devoluciones: boolean
   sucursal_id: number | null
   sucursal_nombre: string | null
 }
@@ -37,6 +38,11 @@ export async function createUsuario(payload: UsuarioCreatePayload): Promise<Usua
 
 export async function setPermisoRetiroExcedente(id: number, puede_retirar_excedente: boolean): Promise<Usuario> {
   const { data } = await api.patch<Usuario>(`/usuarios/${id}/permisos`, { puede_retirar_excedente })
+  return data
+}
+
+export async function setPermisoDevoluciones(id: number, puede_hacer_devoluciones: boolean): Promise<Usuario> {
+  const { data } = await api.patch<Usuario>(`/usuarios/${id}/permisos`, { puede_hacer_devoluciones })
   return data
 }
 

@@ -1,19 +1,7 @@
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
-
-
-class VentasDiaOut(BaseModel):
-    fecha: date
-    total_ventas: Decimal
-    cantidad_ventas: int
-
-
-class VentasPorHoraItem(BaseModel):
-    hora: int
-    total_ventas: Decimal
-    cantidad_ventas: int
 
 
 class AlertaOut(BaseModel):

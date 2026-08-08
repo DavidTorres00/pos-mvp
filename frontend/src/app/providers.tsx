@@ -23,10 +23,15 @@ const queryClient = new QueryClient({
     },
   },
   queryCache: new QueryCache({
-    onError: (error) => {
+    onError: (error, query) => {
       // servidor caído ya tiene su propia pantalla completa (ver ProtectedLayout /
       // ServidorMantenimiento) — un toast encima sería ruido duplicado
       if (esErrorDeRed(error)) return
+      // queries marcadas `meta: { silent: true }` (ej. el heartbeat de useSaludServidor) tienen
+      // su propio manejo de error dedicado — un fallo HTTP puntual del /health (no de red, ese
+      // ya se filtra arriba) no debe mostrar "no se pudo cargar la información": el heartbeat
+      // reintenta solo en el siguiente tick, sin que el cajero/admin necesite hacer nada
+      if (query.meta?.silent) return
       toast.error('No se pudo cargar la información. Intenta nuevamente.')
     },
   }),

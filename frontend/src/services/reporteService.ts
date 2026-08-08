@@ -1,18 +1,6 @@
 import { api } from '@/services/api'
 import type { CajaResumen } from '@/services/cajaService'
 
-export interface VentasDia {
-  fecha: string
-  total_ventas: string
-  cantidad_ventas: number
-}
-
-export interface VentasPorHoraItem {
-  hora: number
-  total_ventas: string
-  cantidad_ventas: number
-}
-
 export interface SucursalResumen {
   sucursal_id: number
   sucursal_nombre: string
@@ -36,18 +24,6 @@ export interface Alerta {
   sucursal_id: number | null
   equipo_id: number | null
   auditoria_id: number | null
-}
-
-export async function getVentasDia(fecha?: string): Promise<VentasDia> {
-  const { data } = await api.get<VentasDia>('/reportes/ventas-dia', { params: fecha ? { fecha } : undefined })
-  return data
-}
-
-export async function getVentasPorHora(fecha?: string): Promise<VentasPorHoraItem[]> {
-  const { data } = await api.get<VentasPorHoraItem[]>('/reportes/ventas-por-hora', {
-    params: fecha ? { fecha } : undefined,
-  })
-  return data
 }
 
 export async function getCajasAbiertas(): Promise<CajaResumen[]> {

@@ -80,7 +80,7 @@ export function SucursalesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { data: sucursalesData, isLoading, isError } = useSucursales(debouncedSearch, 1, 100)
+  const { data: sucursalesData, isLoading, isError } = useSucursales(debouncedSearch, 1, 100, isAdmin)
   const sucursales = sucursalesData?.items ?? []
   const seleccionada = sucursales.find((s) => s.id === seleccionadaId) ?? null
   const primeraSucursalId = sucursales[0]?.id
@@ -89,7 +89,11 @@ export function SucursalesPage() {
     if (seleccionadaId === null && primeraSucursalId !== undefined) setSeleccionadaId(primeraSucursalId)
   }, [seleccionadaId, primeraSucursalId])
 
-  const { data: resumenes } = useQuery({ queryKey: ['resumen-sucursales'], queryFn: getResumenSucursales })
+  const { data: resumenes } = useQuery({
+    queryKey: ['resumen-sucursales'],
+    queryFn: getResumenSucursales,
+    enabled: isAdmin,
+  })
   const resumenSeleccionada = resumenes?.find((r) => r.sucursal_id === seleccionadaId)
 
   const {
@@ -99,7 +103,7 @@ export function SucursalesPage() {
   } = useQuery({
     queryKey: ['sucursal-cajas', seleccionadaId],
     queryFn: () => getCajasDeSucursal(seleccionadaId as number),
-    enabled: seleccionadaId !== null,
+    enabled: isAdmin && seleccionadaId !== null,
   })
 
   const sucursalDialog = useCrudDialogState<Sucursal>()

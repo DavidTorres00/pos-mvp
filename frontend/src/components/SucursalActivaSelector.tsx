@@ -23,7 +23,9 @@ export function SucursalActivaSelector() {
     }
   }, [sucursalId, primeraSucursalId, setSucursalId])
 
-  if (sucursales.length === 0) {
+  // con 0 o 1 sucursal activa no hay nada real que elegir — el admin de una sola sucursal no
+  // necesita ver un selector para una decisión que no existe (ver docs/FRONTEND.md)
+  if (sucursales.length <= 1) {
     return null
   }
 

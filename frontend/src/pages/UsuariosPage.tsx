@@ -7,10 +7,12 @@ import { UsuariosTable } from '@/features/usuarios/components/UsuariosTable'
 import {
   useActualizarNombreUsuario,
   useCrearUsuario,
+  useSetPermisoDevoluciones,
   useSetPermisoRetiroExcedente,
 } from '@/features/usuarios/hooks/useUsuarioMutations'
 import { useUsuarios } from '@/features/usuarios/hooks/useUsuarios'
 import type { UsuarioCreateFormValues, UsuarioNombreFormValues } from '@/features/usuarios/schemas/usuarioSchema'
+import { useSucursales } from '@/features/sucursales/hooks/useSucursales'
 import { getApiErrorMessage } from '@/lib/apiError'
 import { useCrudDialogState } from '@/lib/hooks/useCrudDialogState'
 import { usePagination } from '@/lib/hooks/usePagination'
@@ -25,9 +27,14 @@ export function UsuariosPage() {
   const total = data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / size))
   const setPermiso = useSetPermisoRetiroExcedente()
+  const setPermisoDevoluciones = useSetPermisoDevoluciones()
   const dialog = useCrudDialogState<Usuario>()
   const create = useCrearUsuario()
   const actualizarNombre = useActualizarNombreUsuario()
+  const { data: sucursalesData } = useSucursales('', 1, 100, isAdmin)
+  // con 1 sola sucursal activa, la columna sería el mismo valor repetido en cada fila (ver
+  // docs/FRONTEND.md) — mismo criterio que showSucursal en VentasTable/ProductosTable
+  const mostrarColumnaSucursal = (sucursalesData?.items.filter((s) => s.activo).length ?? 0) > 1
 
   function handleCreate(values: UsuarioCreateFormValues) {
     create.mutate({ ...values, sucursal_id: values.sucursal_id as number }, { onSuccess: dialog.closeCreate })
@@ -47,8 +54,12 @@ export function UsuariosPage() {
     )
   }
 
-  function handleToggle(usuario: Usuario) {
+  function handleToggleExcedente(usuario: Usuario) {
     setPermiso.mutate({ id: usuario.id, puede_retirar_excedente: !usuario.puede_retirar_excedente })
+  }
+
+  function handleToggleDevoluciones(usuario: Usuario) {
+    setPermisoDevoluciones.mutate({ id: usuario.id, puede_hacer_devoluciones: !usuario.puede_hacer_devoluciones })
   }
 
   return (
@@ -56,7 +67,7 @@ export function UsuariosPage() {
       <h1 className="text-xl font-semibold tracking-tight">Usuarios</h1>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          Cajeros del negocio, su sucursal y quién puede retirar excedente de caja.
+          Cajeros del negocio, su sucursal y quién puede retirar excedente de caja o procesar devoluciones.
         </p>
         <Dialog open={dialog.createOpen} onOpenChange={dialog.setCreateOpen}>
           <DialogTrigger asChild>
@@ -105,9 +116,12 @@ export function UsuariosPage() {
       >
         <UsuariosTable
           usuarios={usuarios}
-          onTogglePermiso={handleToggle}
+          onToggleExcedente={handleToggleExcedente}
+          onToggleDevoluciones={handleToggleDevoluciones}
           onEdit={dialog.edit}
-          pending={setPermiso.isPending}
+          pendingExcedente={setPermiso.isPending}
+          pendingDevoluciones={setPermisoDevoluciones.isPending}
+          showSucursal={mostrarColumnaSucursal}
         />
       </TableCard>
     </div>

@@ -11,6 +11,9 @@ class ProductoCreate(BaseModel):
     nombre: str
     sku: str | None = None
     precio_venta: Decimal = Field(gt=0)
+    # opcional: se puede dejar sin cargar y esperar a que la primera compra recibida lo
+    # sincronice sola (ver compra_service.recibir, docs/BACKEND.md)
+    costo: Decimal | None = Field(default=None, ge=0)
     categoria_id: int | None = None
     subcategoria_id: int | None = None
     proveedor_id: int | None = None
@@ -20,6 +23,7 @@ class ProductoUpdate(BaseModel):
     nombre: str
     sku: str
     precio_venta: Decimal = Field(gt=0)
+    costo: Decimal | None = Field(default=None, ge=0)
     categoria_id: int | None = None
     subcategoria_id: int | None = None
     proveedor_id: int | None = None
@@ -39,6 +43,7 @@ class ProductoOut(BaseModel):
     nombre: str
     sku: str
     precio_venta: Decimal
+    costo: Decimal | None
     activo: bool
     categoria_id: int | None
     categoria: CategoriaOut | None

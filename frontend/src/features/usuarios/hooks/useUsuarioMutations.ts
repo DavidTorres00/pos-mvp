@@ -3,6 +3,7 @@ import {
   cerrarCajaDeUsuario,
   createUsuario,
   retirarExcedenteDeUsuario,
+  setPermisoDevoluciones,
   setPermisoRetiroExcedente,
   updateNombreUsuario,
   type UsuarioCreatePayload,
@@ -12,6 +13,14 @@ export function useSetPermisoRetiroExcedente() {
   return useApiMutation(
     ({ id, puede_retirar_excedente }: { id: number; puede_retirar_excedente: boolean }) =>
       setPermisoRetiroExcedente(id, puede_retirar_excedente),
+    [['usuarios']],
+  )
+}
+
+export function useSetPermisoDevoluciones() {
+  return useApiMutation(
+    ({ id, puede_hacer_devoluciones }: { id: number; puede_hacer_devoluciones: boolean }) =>
+      setPermisoDevoluciones(id, puede_hacer_devoluciones),
     [['usuarios']],
   )
 }
